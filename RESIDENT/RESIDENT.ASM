@@ -1,10 +1,12 @@
 .model tiny
 .code
 .186
+locals @@
 org 100h
 
 HOT_KEY		equ 	33
 VIDEOSEG	equ	0b800h
+REG_AMOUNT  equ 12
 
 ;-----------------------------------------------------------------------------
 ;Changes DI address to the beginning of the next line of frame
@@ -30,6 +32,7 @@ Old09Handler	dd 0
 Style		db 201d, 205d, 187d, 186d, 32d, 186d, 200d, 205d, 188d
 X_coord		dw 0
 Y_coord		dw 0
+RegValues   db "AX 0000 BX 0000 CX 0000 DX 0000 SI 0000 DI 0000 BP 0000 SP 0000 DS 0000 CS 0000 ES 0000 SS 0000"
 
 ;----------------------------------------------------------------------------
 ; New 09h interrupt, checks combination CTRL-F and if pushed makes xor 1 to
@@ -40,7 +43,7 @@ checkKeys	proc
 	call cs:Old09Handler
 
 	push ax bx cx dx di si ds es
-	
+
 	mov ah, 02h
 	int 16h
 
@@ -54,6 +57,7 @@ checkKeys	proc
 
 	xor cs:ActivateFlag, 00000001b		; ActivateFlag xor 1
 
+    ; TODO: make 33h
 	mov ax, 03h
 	int 33h
 
@@ -62,6 +66,7 @@ checkKeys	proc
 
 	mov cs:X_coord, cx
 	mov cs:Y_coord, dx
+    ; TODO: make 33h
 
 SkipActivate:
 
@@ -76,7 +81,7 @@ SkipActivate:
 ; If ActivateFlag is 0 - returns to old 08h handler
 ;-----------------------------------------------------------------------------
 draw    	proc
-	push ax bx cx dx di si es ds bp
+	push bx ss es cs ds sp bp di si dx cx bx ax
 
 	push cs
 	pop ds
@@ -84,23 +89,28 @@ draw    	proc
 	cmp cs:ActivateFlag, 0
   	je cs:SkipDraw
 
-    	mov di, cs:Y_coord              ; y coord of the left-top corner of frame
-	mov dx, cs:X_coord		; x coord
-    	call cs:firstCharAddr
+    mov di, cs:Y_coord              ; y coord of the left-top corner of frame
+    mov dx, cs:X_coord		; x coord
+	call cs:firstCharAddr
 
-    	mov ax, VIDEOSEG        ; set videosegment address
-    	mov es, ax              ; in es
+	mov ax, VIDEOSEG        ; set videosegment address
+	mov es, ax              ; in es
 
-    	mov ah, 00000111b       ; black back, red front
-    	mov bx, 8               ; set frame height
-    	mov dx, 11              ; set frame width
-    	mov si, offset cs:Style        ; set frame style
+	mov ah, 00000111b       ; black back, red front
+	mov bx, REG_AMOUNT + 4  ; set frame height
+	mov dx, 11              ; set frame width
+	mov si, offset cs:Style        ; set frame style
 
 	call cs:drawFrame
 
+    mov si, offset cs:RegValues
+    call cs:writeAllReg
+
+    call cs:screenReg
+
 SkipDraw:
 
-    	pop bp ds es si di dx cx bx ax
+    pop ax bx cx dx si di bp bx ds bx es bx bx
 
 	jmp cs:Old08Handler
 
@@ -192,6 +202,135 @@ drawFrame	proc
 	ret
 	endp
 
+;-----------------------------------------------------------------------------
+;Write registers' values in string RegValues
+;Entry:	SI - address of the beginning of the string
+;Exit: None
+;Destr: SI, AX, DX, CX, BX
+;-----------------------------------------------------------------------------
+writeAllReg proc
+    mov cx, REG_AMOUNT
+    mov bx, sp
+    add bx, 2
+
+@@Next:
+    mov ax, word ptr ss:[bx]
+    add si, 3
+
+@@FirstDigit:
+    mov dx, ax
+    shr dx, 12
+
+    cmp dl, 9
+    jg cs:@@Hex1
+
+    add dl, 30h
+    mov byte ptr cs:[si], dl
+    inc si
+    jmp cs:@@SecondDigit
+@@Hex1:
+    add dl, 37h
+    mov byte ptr cs:[si], dl
+    inc si
+
+@@SecondDigit:
+    mov dx, ax
+    shl dx, 4
+    shr dx, 12
+
+    cmp dl, 9
+    jg cs:@@Hex2
+
+    add dl, 30h
+    mov byte ptr cs:[si], dl
+    inc si
+    jmp cs:@@ThirdDigit
+@@Hex2:
+    add dl, 37h
+    mov byte ptr cs:[si], dl
+    inc si
+
+@@ThirdDigit:
+    mov dx, ax
+    shl dx, 8
+    shr dx, 12
+
+    cmp dl, 9
+    jg cs:@@Hex3
+
+    add dl, 30h
+    mov byte ptr cs:[si], dl
+    inc si
+    jmp cs:@@FourthDigit
+@@Hex3:
+    add dl, 37h
+    mov byte ptr cs:[si], dl
+    inc si
+
+@@FourthDigit:
+    mov dx, ax
+    shl dx, 12
+    shr dx, 12
+
+    cmp dl, 9
+    jg cs:@@Hex4
+
+    add dl, 30h
+    mov byte ptr cs:[si], dl
+    jmp cs:@@DoneWriting
+@@Hex4:
+    add dl, 37h
+    mov byte ptr cs:[si], dl
+
+@@DoneWriting:
+    add bx, 2
+    add si, 2
+    dec cx
+
+    cmp cx, 0
+    je cs:@@Done
+    jmp cs:@@Next
+@@Done:
+
+    ret
+    endp
+
+;-----------------------------------------------------------------------------
+;Prints RegValues in the frame
+;Entry:	None
+;Exit: None
+;Destr:
+;-----------------------------------------------------------------------------
+screenReg   proc
+    mov di, cs:Y_coord              ; y coord of the left-top corner of frame
+	mov dx, cs:X_coord		; x coord
+    call cs:firstCharAddr
+
+    add di, 324
+    mov ah, 00000111b       ; black back, white front
+    mov si, offset cs:RegValues
+    mov dx, 7
+    mov bp, REG_AMOUNT
+
+@@Next:
+    mov cx, dx
+@@Loop:
+    lodsb
+    stosw
+
+    loop cs:@@Loop
+    inc si
+
+    SHIFT_TO_NEXT_LINE
+
+    dec bp
+    cmp bp, 0
+    jne cs:@@Next
+
+    ret
+    endp
+
+
 EndOfResident:
 
 Load:
@@ -205,7 +344,7 @@ Load:
 	mov dx, offset checkKeys		; handler address
 	int 21h					;
 
-	mov ax, 3508h				; get old 08h interrupt 
+	mov ax, 3508h				; get old 08h interrupt
 	int 21h					; handler addr in es:bx
 
 	mov word ptr Old08Handler, bx		; save old 08h offset

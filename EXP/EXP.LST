@@ -1,0 +1,59 @@
+Turbo Assembler	 Version 4.1	    02/24/25 21:55:08	    Page 1
+exp.asm
+
+
+
+      1	0000			     .model tiny
+      2	0000			     .code
+      3				     .186
+      4				     org 100h
+      5
+      6	0100			     Start:
+      7	0100  50 53			     push ax bx
+      8
+      9	0102  E8 0005			     call func
+     10
+     11	0105  B8 4C00			     mov ax, 4c00h
+     12	0108  CD 21			     int 21h
+     13
+     14	010A			     func    proc
+     15
+     16	010A  50			     push ax
+     17
+     18	010B  C3			     ret
+     19	010C				     endp
+     20
+     21				     end     Start
+Turbo Assembler	 Version 4.1	    02/24/25 21:55:08	    Page 2
+Symbol Table
+
+
+
+
+Symbol Name			  Type	 Value
+
+??DATE				  Text	 "02/24/25"
+??FILENAME			  Text	 "exp	  "
+??TIME				  Text	 "21:55:08"
+??VERSION			  Number 040A
+@32BIT				  Text	 0
+@CODE				  Text	 DGROUP
+@CODESIZE			  Text	 0
+@CPU				  Text	 0103H
+@CURSEG				  Text	 _TEXT
+@DATA				  Text	 DGROUP
+@DATASIZE			  Text	 0
+@FILENAME			  Text	 EXP
+@INTERFACE			  Text	 000H
+@MODEL				  Text	 1
+@STACK				  Text	 DGROUP
+@WORDSIZE			  Text	 2
+FUNC				  Near	 DGROUP:010A
+START				  Near	 DGROUP:0100
+
+Groups & Segments		  Bit Size Align  Combine Class
+
+DGROUP				  Group
+  _DATA				  16  0000 Word	  Public  DATA
+  _TEXT				  16  010C Word	  Public  CODE
+
