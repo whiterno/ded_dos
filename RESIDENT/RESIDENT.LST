@@ -1,24 +1,83 @@
-Turbo Assembler	 Version 4.1	    02/24/25 05:23:23	    Page 1
+Turbo Assembler	 Version 4.1	    02/24/25 06:43:51	    Page 1
 resident.asm
 
 
 
       1	0000			     .model tiny
       2	0000			     .code
-      3				     org 100h
-      4
-      5	0100			     Start:
-      6	0100  00000000		     Old09Handler    dd	0
-      7	0104  EB 01 90			     jmp Load
-      8	0107			     Load:
-      9	0107  B8 3509			     mov ax, 3509h		     ; get old 09h interrupt
-     10	010A  CD 21			     int 21h			     ; handler in es:bx
+      3				     .186
+      4				     org 100h
+      5
+      6	      =0021		     HOT_KEY	     equ     33
+      7
+      8	0100			     Start:
+      9
+     10	0100  EB 37 90			     jmp Load
      11
-     12	010C  89 1E 0100r		     mov word ptr Old09Handler,	bx	     ; save old	offset
-     13	0110  8C 06 0102r		     mov word ptr Old09HAndler + 2, es	     ; save old	segment
-     14
-     15				     end     Start
-Turbo Assembler	 Version 4.1	    02/24/25 05:23:23	    Page 2
+     12	0103  00		     ActivateFlag    db	0
+     13	0104  00000000		     Old08Handler    dd	0
+     14	0108  00000000		     Old09Handler    dd	0
+     15
+     16
+     17				     ;----------------------------------------------------------------------------
+     18				     ; New 09h interrupt, checks combination CTRL-F and	if pushed makes	xor 1 to
+     19				     ; ActivateFlag
+     20				     ; Entry: None
+     21				     ; Exit:  None
+     22				     ; Destr: None
+     23				     ;----------------------------------------------------------------------------
+     24	010C			     checkKeys	     proc
+     25	010C  50 53 51 52 57 56	1E+	     push ax bx	cx dx di si ds es
+     26	      06
+     27
+     28	0114  E4 60			     in	al, 60h			     ; read letter's scancode from 60h port
+     29	0116  8A 26 01A1		     mov ah, byte ptr 0000:[0417]
+     30
+     31	011A  80 E4 02			     and ah, 00000010b		     ; ah = 10b	if ctrl	is pushed,
+     32									     ;	     0b	otherwise
+     33
+     34	011D  80 FC 00			     cmp ah, 0			     ; check if	ctrl is	pushed
+     35	0120  75 0A			     jne cs:SkipActivate
+     36	0122  3C 21			     cmp al, HOT_KEY		     ; compare al and 33(F scancode)
+     37	0124  75 06			     jne cs:SkipActivate
+     38
+     39	0126  2E: 80 36	0103r 01	     xor cs:ActivateFlag, 00000001b	     ; ActivateFlag xor	1
+     40
+     41	012C			     SkipActivate:
+     42
+     43	012C  07 1F 5E 5F 5A 59	5B+	     pop es ds si di dx	cx bx ax	     ; save all	registers
+     44	      58
+     45
+     46	0134  2E: FF 2E	0108r		     jmp cs:Old09Handler		     ; return to old handler
+     47
+     48	0139				     endp
+     49
+     50	0139			     EndOfResident:
+     51
+     52	0139			     Load:
+     53	0139  B8 3509			     mov ax, 3509h		     ; get old 09h interrupt
+     54	013C  CD 21			     int 21h			     ; handler in es:bx
+     55
+     56	013E  89 1E 0108r		     mov word ptr Old09Handler,	bx	     ; save old	offset
+     57	0142  8C 06 010Ar		     mov word ptr Old09HAndler + 2, es	     ; save old	segment
+Turbo Assembler	 Version 4.1	    02/24/25 06:43:51	    Page 2
+resident.asm
+
+
+
+     58
+     59	0146  B8 2509			     mov ax, 2509h			     ; set new 09h interrupt
+     60	0149  BA 010Cr			     mov dx, offset checkKeys		     ; handler address
+     61	014C  CD 21			     int 21h				     ;
+     62
+     63	014E  B8 3100			     mov ax, 3100h			     ;
+     64	0151  BA 0139r			     mov dx, offset EndOfResident	     ; dx = &EndOfResident
+     65	0154  C1 EA 04			     shr dx, 4				     ; count in	paragraphs
+     66	0157  42			     inc dx				     ;
+     67	0158  CD 21			     int 21h				     ; save and	stay resident
+     68
+     69				     end     Start
+Turbo Assembler	 Version 4.1	    02/24/25 06:43:51	    Page 3
 Symbol Table
 
 
@@ -28,12 +87,12 @@ Symbol Name			  Type	 Value
 
 ??DATE				  Text	 "02/24/25"
 ??FILENAME			  Text	 "resident"
-??TIME				  Text	 "05:23:23"
+??TIME				  Text	 "06:43:51"
 ??VERSION			  Number 040A
 @32BIT				  Text	 0
 @CODE				  Text	 DGROUP
 @CODESIZE			  Text	 0
-@CPU				  Text	 0101H
+@CPU				  Text	 0103H
 @CURSEG				  Text	 _TEXT
 @DATA				  Text	 DGROUP
 @DATASIZE			  Text	 0
@@ -42,13 +101,19 @@ Symbol Name			  Type	 Value
 @MODEL				  Text	 1
 @STACK				  Text	 DGROUP
 @WORDSIZE			  Text	 2
-LOAD				  Near	 DGROUP:0107
-OLD09HANDLER			  Dword	 DGROUP:0100
+ACTIVATEFLAG			  Byte	 DGROUP:0103
+CHECKKEYS			  Near	 DGROUP:010C
+ENDOFRESIDENT			  Near	 DGROUP:0139
+HOT_KEY				  Number 0021
+LOAD				  Near	 DGROUP:0139
+OLD08HANDLER			  Dword	 DGROUP:0104
+OLD09HANDLER			  Dword	 DGROUP:0108
+SKIPACTIVATE			  Near	 DGROUP:012C
 START				  Near	 DGROUP:0100
 
 Groups & Segments		  Bit Size Align  Combine Class
 
 DGROUP				  Group
   _DATA				  16  0000 Word	  Public  DATA
-  _TEXT				  16  0114 Word	  Public  CODE
+  _TEXT				  16  015A Word	  Public  CODE
 

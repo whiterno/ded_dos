@@ -7,18 +7,16 @@ HOT_KEY		equ 	33
 
 Start:
 
+	jmp Load
+
 ActivateFlag	db 0
 Old08Handler	dd 0
 Old09Handler	dd 0
 
-	jmp Load
 
 ;----------------------------------------------------------------------------
 ; New 09h interrupt, checks combination CTRL-F and if pushed makes xor 1 to
 ; ActivateFlag
-; Entry: None
-; Exit:	 None
-; Destr: None
 ;----------------------------------------------------------------------------
 checkKeys	proc
 	push ax bx cx dx di si ds es
@@ -33,26 +31,35 @@ checkKeys	proc
 	jne cs:SkipActivate
 	cmp al, HOT_KEY			; compare al and 33(F scancode)
 	jne cs:SkipActivate
-	
 
-	xor cs:Activate, 00000001b		; Activate xor 1
-	cmp cs:Activate, 0
-	je cs:SkipActivate
-
-	call cs:drawLine 
+	xor cs:ActivateFlag, 00000001b		; ActivateFlag xor 1
 
 SkipActivate:
 
-	pop es ds si di dx cx bx ax
+	pop es ds si di dx cx bx ax		; save all registers
 
-	jmp cs:Old09Handler
+	jmp cs:Old09Handler			; return to old handler
 
 	endp
 
-drawLine	proc
+;-----------------------------------------------------------------------------
+; If ActivateFlag is 1 - draws a frame with real time registers' values
+; every tick, then returns to old 08h handler
+; If ActivateFlag is 0 - returns to old 08h handler 
+;-----------------------------------------------------------------------------
+drawFrame	proc
+	push ax bx cx dx di si es ds
 
-	ret 
+	
+
+
+SkipDraw:
+
+	jmp cs:Old08Handler
+
 	endp
+
+	
 
 EndOfResident:
 
@@ -68,7 +75,7 @@ Load:
 	int 21h					;
 	
 	mov ax, 3100h				; 
-	mov dx, EndOfResident			; dx = EndOfResident
+	mov dx, offset EndOfResident		; dx = &EndOfResident
 	shr dx, 4				; count in paragraphs
 	inc dx					;
 	int 21h					; save and stay resident 	
