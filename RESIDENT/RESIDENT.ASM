@@ -28,7 +28,8 @@ Old08Handler	dd 0
 Old09Handler	dd 0
 
 Style		db 201d, 205d, 187d, 186d, 32d, 186d, 200d, 205d, 188d
-
+X_coord		dw 0
+Y_coord		dw 0
 
 ;----------------------------------------------------------------------------
 ; New 09h interrupt, checks combination CTRL-F and if pushed makes xor 1 to
@@ -53,6 +54,15 @@ checkKeys	proc
 
 	xor cs:ActivateFlag, 00000001b		; ActivateFlag xor 1
 
+	mov ax, 03h
+	int 33h
+
+	shr cx, 3
+	shr dx, 3
+
+	mov cs:X_coord, cx
+	mov cs:Y_coord, dx
+
 SkipActivate:
 
 	pop es ds si di dx cx bx ax		; return all registers
@@ -74,8 +84,8 @@ draw    	proc
 	cmp cs:ActivateFlag, 0
   	je cs:SkipDraw
 
-    	mov dx, 4               ; x
-    	mov di, 4               ; y coords of the left-top corner of frame
+    	mov di, cs:Y_coord              ; y coord of the left-top corner of frame
+	mov dx, cs:X_coord		; x coord
     	call cs:firstCharAddr
 
     	mov ax, VIDEOSEG        ; set videosegment address
