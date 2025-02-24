@@ -35,16 +35,19 @@ Style		db 201d, 205d, 187d, 186d, 32d, 186d, 200d, 205d, 188d
 ; ActivateFlag
 ;----------------------------------------------------------------------------
 checkKeys	proc
+	pushf
+	call cs:Old09Handler
+
 	push ax bx cx dx di si ds es
+	
+	mov ah, 02h
+	int 16h
 
-	in al, 60h			; read letter's scancode from 60h port
-	mov ah, byte ptr 0000:[0417]
-
-	and ah, 00000010b		; ah = 10b if ctrl is pushed,
-					; 	0b otherwise
-
-	cmp ah, 0			; check if ctrl is pushed
+	cmp al, 04h		; check if ctrl is pushed
 	jne cs:SkipActivate
+
+	in al, 60h
+
 	cmp al, HOT_KEY			; compare al and 33(F scancode)
 	jne cs:SkipActivate
 
@@ -52,10 +55,9 @@ checkKeys	proc
 
 SkipActivate:
 
-	pop es ds si di dx cx bx ax		; save all registers
+	pop es ds si di dx cx bx ax		; return all registers
 
-	jmp cs:Old09Handler			; return to old handler
-
+	iret
 	endp
 
 ;-----------------------------------------------------------------------------
@@ -65,6 +67,9 @@ SkipActivate:
 ;-----------------------------------------------------------------------------
 draw    	proc
 	push ax bx cx dx di si es ds bp
+
+	push cs
+	pop ds
 
 	cmp cs:ActivateFlag, 0
   	je cs:SkipDraw
@@ -76,7 +81,7 @@ draw    	proc
     	mov ax, VIDEOSEG        ; set videosegment address
     	mov es, ax              ; in es
 
-    	mov ah, 00000100b       ; black back, red front
+    	mov ah, 00000111b       ; black back, red front
     	mov bx, 8               ; set frame height
     	mov dx, 11              ; set frame width
     	mov si, offset cs:Style        ; set frame style
