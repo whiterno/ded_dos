@@ -1,0 +1,54 @@
+Turbo Assembler	 Version 4.1	    02/24/25 05:23:23	    Page 1
+resident.asm
+
+
+
+      1	0000			     .model tiny
+      2	0000			     .code
+      3				     org 100h
+      4
+      5	0100			     Start:
+      6	0100  00000000		     Old09Handler    dd	0
+      7	0104  EB 01 90			     jmp Load
+      8	0107			     Load:
+      9	0107  B8 3509			     mov ax, 3509h		     ; get old 09h interrupt
+     10	010A  CD 21			     int 21h			     ; handler in es:bx
+     11
+     12	010C  89 1E 0100r		     mov word ptr Old09Handler,	bx	     ; save old	offset
+     13	0110  8C 06 0102r		     mov word ptr Old09HAndler + 2, es	     ; save old	segment
+     14
+     15				     end     Start
+Turbo Assembler	 Version 4.1	    02/24/25 05:23:23	    Page 2
+Symbol Table
+
+
+
+
+Symbol Name			  Type	 Value
+
+??DATE				  Text	 "02/24/25"
+??FILENAME			  Text	 "resident"
+??TIME				  Text	 "05:23:23"
+??VERSION			  Number 040A
+@32BIT				  Text	 0
+@CODE				  Text	 DGROUP
+@CODESIZE			  Text	 0
+@CPU				  Text	 0101H
+@CURSEG				  Text	 _TEXT
+@DATA				  Text	 DGROUP
+@DATASIZE			  Text	 0
+@FILENAME			  Text	 RESIDENT
+@INTERFACE			  Text	 000H
+@MODEL				  Text	 1
+@STACK				  Text	 DGROUP
+@WORDSIZE			  Text	 2
+LOAD				  Near	 DGROUP:0107
+OLD09HANDLER			  Dword	 DGROUP:0100
+START				  Near	 DGROUP:0100
+
+Groups & Segments		  Bit Size Align  Combine Class
+
+DGROUP				  Group
+  _DATA				  16  0000 Word	  Public  DATA
+  _TEXT				  16  0114 Word	  Public  CODE
+

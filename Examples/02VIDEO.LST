@@ -1,0 +1,56 @@
+Turbo Assembler	 Version 4.1	    02/05/25 00:38:11	    Page 1
+02video.asm
+
+
+
+      1				     ;------------------------------------------------------------------------------
+      2				     ;			     Задание # 2. Файл 02video.asm
+      3				     ;	       Вывести в левый верхний угол экрана '!' путeм помещения его
+      4				     ;			     непосредственно в видеопамять
+      5				     ;			  (c) 2001 Copyleft by Andreev Andrey
+      6				     ;------------------------------------------------------------------------------
+      7
+      8	0000			     .model tiny
+      9
+     10	0000			     .code
+     11				     org 100h
+     12	0100  BB B800		     start:	     mov bx, 0b800h	     ; B800 - адрес видеопамяти
+     13	0103  8E C3				     mov es, bx		     ;
+     14	0105  BB 0000				     mov bx, 0
+     15	0108  26: C6 07	21			     mov byte ptr es:[bx], 21h ; Помещение 21h (!) в лв	угол экрана
+     16
+     17	010C  B8 4C00				     mov ax, 4c00h	     ; выход
+     18	010F  CD 21				     int 21h
+     19				     end start
+Turbo Assembler	 Version 4.1	    02/05/25 00:38:11	    Page 2
+Symbol Table
+
+
+
+
+Symbol Name			  Type	 Value
+
+??DATE				  Text	 "02/05/25"
+??FILENAME			  Text	 "02video "
+??TIME				  Text	 "00:38:11"
+??VERSION			  Number 040A
+@32BIT				  Text	 0
+@CODE				  Text	 DGROUP
+@CODESIZE			  Text	 0
+@CPU				  Text	 0101H
+@CURSEG				  Text	 _TEXT
+@DATA				  Text	 DGROUP
+@DATASIZE			  Text	 0
+@FILENAME			  Text	 02VIDEO
+@INTERFACE			  Text	 000H
+@MODEL				  Text	 1
+@STACK				  Text	 DGROUP
+@WORDSIZE			  Text	 2
+START				  Near	 DGROUP:0100
+
+Groups & Segments		  Bit Size Align  Combine Class
+
+DGROUP				  Group
+  _DATA				  16  0000 Word	  Public  DATA
+  _TEXT				  16  0111 Word	  Public  CODE
+

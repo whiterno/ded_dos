@@ -1,0 +1,129 @@
+Turbo Assembler	 Version 4.1	    02/19/25 00:15:01	    Page 1
+ded2.asm
+
+
+
+      1	0000			     .model tiny
+      2	0000			     .code
+      3				     .186
+      4				     locals @@
+      5				     org 100h
+      6
+      7	      =B800		     VIDEOSEG	     equ     0b800h
+      8
+      9	0100			     Main:
+     10	0100  33 C0			     xor ax, ax				     ; ax = 0
+     11	0102  8E C0			     mov es, ax				     ; es = 0
+     12
+     13	0104  BB 0024			     mov bx, 09h * 4			 ; 09h interruption
+     14											 ; 4 bytes for address
+     15
+     16	0107  26: 8B 07			     mov ax, es:[bx]		     ;
+     17	010A  A3 015Br			     mov Old09Ofs, ax		     ; save old	int09h address
+     18	010D  26: 8B 47	02		     mov ax, es:[bx + 2]	     ;
+     19	0111  A3 015Dr			     mov Old09Seg, ax		     ;
+     20
+     21	0114  FA			     cli					 ; if =	0 (clear if)
+     22
+     23	0115  26: C7 07	012Cr		     mov es:[bx], offset newInt09    ; set offset (fow newInt09)
+     24									 ; remember about little endian
+     25									 ; because of it in memory: offset:segment
+     26
+     27	011A  0E			     push cs					 ; ax =	cs
+     28	011B  58			     pop ax					 ;
+     29
+     30	011C  26: 89 47	02		     mov es:[bx	+ 2], ax		     ; set segment address
+     31
+     32	0120  FB			     sti					 ; if =	1 (set if)
+     33
+     34					     ;int 09h
+     35
+     36	0121  B4 31			     mov ah, 31h			     ; exit with reserving memory for resident
+     37	0123  BA 0160r			     mov dx, offset EOF
+     38	0126  C1 EA 04			     shr dx, 4				     ; 31h counts in paragraphs
+     39	0129  42			     inc dx			     ; to make sure everything in memory
+     40	012A  CD 21			     int 21h			     ; exit(with resident state)
+     41
+     42	012C			     newInt09	     proc
+     43
+     44	012C  50 53 51 52 56 57	1E+	     push ax bx	cx dx si di ds es    ; save registers not to fuck them up
+     45	      06
+     46
+     47	0134  B8 B800			 mov ax, VIDEOSEG		 ; set videomemory
+     48	0137  8E C0			 mov es, ax			 ; in es
+     49
+     50	0139  B4 4E			     mov ah, 4eh		     ; red back	- yellow fore
+     51	013B  BF 0320			     mov di, 5 * 80 * 2		     ; 5th line
+     52
+     53	013E  FC			     cld			     ; df = 0 (++)
+     54
+     55	013F  E4 60			 in al,	60h			 ; al =	scancode
+     56	0141  AB			 stosw				 ; es:[di++] = ax
+     57
+Turbo Assembler	 Version 4.1	    02/19/25 00:15:01	    Page 2
+ded2.asm
+
+
+
+     58	0142  E4 61			     in	al, 61h		     ;
+     59	0144  8A E0			     mov ah, al		     ; blink enable/disable keyboard
+     60	0146  0C 80			     or	al, 80h		     ; to let keyboard controller know
+     61	0148  E6 61			     out 61h, al	     ; that changes done
+     62	014A  8A C4			     mov al, ah		     ;
+     63	014C  E6 61			     out 61h, al	     ; Keyboard	Controller needs it
+     64
+     65	014E  B0 20			     mov al, 20h	     ; send End	of Interrupt signal
+     66	0150  E6 20			     out 20h, al	     ; Interrupt Controllet needs it
+     67
+     68	0152  07 1F 5F 5E 5A 59	5B+	     pop es ds di si dx	cx bx ax	     ; revive registers
+     69	      58
+     70											 ; done	your deel - return former registers
+     71
+     72	015A			     ChainOldISR:			 ; address of the old int09h
+     73	015A  EA			     db	0eah			     ;	 jmp in	bytes
+     74	015B  0000		     Old09Ofs	     dw	0		     ;	 offset	- changes in line 17
+     75	015D  0000		     Old09Seg	     dw	0		     ;	 segment - changes in line 19
+     76
+     77	015F  CF			     iret
+     78	0160				     endp
+     79
+     80	0160			     EOF:
+     81				     end	     Main
+Turbo Assembler	 Version 4.1	    02/19/25 00:15:01	    Page 3
+Symbol Table
+
+
+
+
+Symbol Name			  Type	 Value
+
+??DATE				  Text	 "02/19/25"
+??FILENAME			  Text	 "ded2	  "
+??TIME				  Text	 "00:15:01"
+??VERSION			  Number 040A
+@32BIT				  Text	 0
+@CODE				  Text	 DGROUP
+@CODESIZE			  Text	 0
+@CPU				  Text	 0103H
+@CURSEG				  Text	 _TEXT
+@DATA				  Text	 DGROUP
+@DATASIZE			  Text	 0
+@FILENAME			  Text	 DED2
+@INTERFACE			  Text	 000H
+@MODEL				  Text	 1
+@STACK				  Text	 DGROUP
+@WORDSIZE			  Text	 2
+CHAINOLDISR			  Near	 DGROUP:015A
+EOF				  Near	 DGROUP:0160
+MAIN				  Near	 DGROUP:0100
+NEWINT09			  Near	 DGROUP:012C
+OLD09OFS			  Word	 DGROUP:015B
+OLD09SEG			  Word	 DGROUP:015D
+VIDEOSEG			  Number B800
+
+Groups & Segments		  Bit Size Align  Combine Class
+
+DGROUP				  Group
+  _DATA				  16  0000 Word	  Public  DATA
+  _TEXT				  16  0160 Word	  Public  CODE
+

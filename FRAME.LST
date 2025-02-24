@@ -1,0 +1,674 @@
+Turbo Assembler	 Version 4.1	    02/17/25 24:15:59	    Page 1
+frame.asm
+
+
+
+      1	0000			     .model tiny
+      2	0000			     .code
+      3				     .186
+      4				     locals @@
+      5				     org 100h
+      6
+      7				     ;-----------------------------------------------------------------------------
+      8				     ;Changes DI address to the	beginning of the next line of frame
+      9				     ;Entry: DI	- address pointer
+     10				     ;	     DX	- line width
+     11				     ;Exit:  DI	- address of the beginning of the next line of frame
+     12				     ;Destr: DI
+     13				     ;-----------------------------------------------------------------------------
+     14				     SHIFT_TO_NEXT_LINE	macro
+     15						     sub di, dx		     ; shift in	line
+     16						     sub di, dx		     ; di = di - 2*dx
+     17						     add di, 160	     ; jump on the next	line
+     18				     endm
+     19
+     20	      =B800		     VIDEOSEG	     equ     0b800h
+     21
+     22				     ;-----------------------------------------------------------------------------
+     23				     ;Counts string length until '$' (not including)
+     24				     ;Entry: DI	- memory address of the	string
+     25				     ;Exit:  CX	- length of the	string
+     26				     ;Destr: AL, CX, DI
+     27				     ;-----------------------------------------------------------------------------
+     28				     STR_LEN	     macro
+     29						     mov al, '$'	     ; set terminating symbol
+     30						     xor cx, cx		     ; cx = 0
+     31						     dec cx		     ; cx--
+     32						     repne scasb	     ; while ((cx--) and al != es:[di])
+     33						     neg cx		     ; cx = -cx
+     34						     dec cx		     ; cx--
+     35				     endm
+     36
+     37				     ;-----------------------------------------------------------------------------
+     38				     ;Clears screen
+     39				     ;Entry: None
+     40				     ;Exit:  None
+     41				     ;Destr: AH, DX
+     42				     ;-----------------------------------------------------------------------------
+     43				     CLEAR_SCREEN    macro
+     44						     mov ah, 09h
+     45						     mov dx, offset CLEAR_VIEW
+     46						     int 21h
+     47				     endm
+     48
+     49	0100			     Start:
+     50	0100  E9 00B5				     jmp Main
+     51
+     52				     ;-----------------------------------------------------------------------------
+     53				     include cmd.asm
+1    54				     ;-----------------------------------------------------------------------------
+1    55				     ;Skips spaces in cmd
+1    56				     ;Entry: SI	- address of space
+1    57				     ;Exit:  SI	- address of the next not space	character
+Turbo Assembler	 Version 4.1	    02/17/25 24:15:59	    Page 2
+frame.asm
+
+
+
+1    58				     ;Destr: SI
+1    59				     ;-----------------------------------------------------------------------------
+1    60	0103			     skipSpaces	 proc
+1    61
+1    62	0103			     @@Next:
+1    63	0103  80 3C 20			     cmp byte ptr[si], 20h
+1    64	0106  75 03			     jne @@Done
+1    65	0108  46			     inc si
+1    66	0109  EB F8			     jmp @@Next
+1    67
+1    68	010B  C3		     @@Done: ret
+1    69	010C				     endp
+1    70
+1    71				     ;-----------------------------------------------------------------------------
+1    72				     ;Gets decimal number from command line
+1    73				     ;Entry: SI	- number address
+1    74				     ;Exit:  AX	- decimal number
+1    75				     ;Destr: AX, SI, CX
+1    76				     ;-----------------------------------------------------------------------------
+1    77	010C			     getDec  proc
+1    78
+1    79	010C  33 C0			     xor ax, ax
+1    80
+1    81	010E			     @@Next:
+1    82	010E  02 04			     add al, byte ptr[si]
+1    83	0110  46			     inc si
+1    84	0111  33 C9			     xor cx, cx
+1    85
+1    86	0113  2D 0030			     sub ax, '0'
+1    87	0116  03 C8			     add cx, ax
+1    88	0118  C1 E1 02			     shl cx, 2
+1    89	011B  03 C1			     add ax, cx
+1    90	011D  D1 E0			     shl ax, 1
+1    91
+1    92	011F  80 3C 20			     cmp byte ptr [si],	20h
+1    93	0122  75 EA			     jne @@Next
+1    94
+1    95	0124  D1 E8			     shr ax, 1
+1    96	0126  2B C1			     sub ax, cx
+1    97
+1    98	0128  C3			     ret
+1    99	0129				     endp
+1   100
+1   101				     ;-----------------------------------------------------------------------------
+1   102				     ;Gets hexadecimal number from command line
+1   103				     ;Entry: SI	- number address
+1   104				     ;Exit:  AX	- hexadecimal number
+1   105				     ;Destr: AX, SI
+1   106				     ;-----------------------------------------------------------------------------
+1   107	0129			     getHex  proc
+1   108
+1   109	0129  33 C0			     xor ax, ax
+1   110
+1   111	012B			     @@Next:
+1   112	012B  02 04			     add al, byte ptr[si]
+1   113
+1   114	012D  80 3C 61			     cmp byte ptr[si], 'a'
+Turbo Assembler	 Version 4.1	    02/17/25 24:15:59	    Page 3
+frame.asm
+
+
+
+1   115	0130  7D 03			     jge @@Hex
+1   116	0132  EB 0E 90			     jmp @@Dec
+1   117
+1   118	0135			     @@Hex:
+1   119	0135  46			     inc si
+1   120
+1   121	0136  2D 0061			     sub ax, 'a'
+1   122	0139  05 000A			     add ax, 10
+1   123	013C  C1 E0 04			     shl ax, 4
+1   124
+1   125	013F  EB 08 90			     jmp @@Condition
+1   126
+1   127	0142			     @@Dec:
+1   128	0142  46			     inc si
+1   129
+1   130	0143  2D 0030			     sub ax, '0'
+1   131	0146  C1 E0 04			     shl ax, 4
+1   132
+1   133	0149  80 3C 20		     @@Condition:cmp byte ptr[si], 20h
+1   134	014C  75 DD				 jne @@Next
+1   135
+1   136	014E  C1 E8 04			     shr ax, 4
+1   137
+1   138	0151  C3			     ret
+1   139	0152				     endp
+1   140
+    141				     include strings.asm
+1   142				     ;-----------------------------------------------------------------------------
+1   143				     ;Counts max length	of given strings (divided by '$') and their amount
+1   144				     ; "$$" means full stop
+1   145				     ;Entry: DI	- memory address of the	string
+1   146				     ;Exit:  BH:BL - amount of strings : max length of the string
+1   147				     ;Destr: DI, BX, CX, BP, AL
+1   148				     ;-----------------------------------------------------------------------------
+1   149	0152			     maxStrLenNum    proc
+1   150
+1   151	0152  33 DB				     xor bx, bx			     ; bx = 0
+1   152	0154			     @@Next:
+1   153						     STR_LEN			     ; length of string	untill '$'
+2   154	0154  B0 24				     mov al, '$'	     ; set terminating symbol
+2   155	0156  33 C9				     xor cx, cx		     ; cx = 0
+2   156	0158  49				     dec cx		     ; cx--
+2   157	0159  F2> AE				     repne scasb	     ; while ((cx--) and al != es:[di])
+2   158	015B  F7 D9				     neg cx		     ; cx = -cx
+2   159	015D  49				     dec cx		     ; cx--
+1   160	015E  49				     dec cx			     ; remove '$'
+1   161	015F  FE C7				     inc bh			     ; amount++
+1   162
+1   163	0161  3A D9				     cmp bl, cl
+1   164	0163  73 02				     jae @@Else
+1   165	0165  8A D9				     mov bl, cl			     ; bl = cl if (bl <	cl)
+1   166
+1   167	0167  80 F9 00		     @@Else:	     cmp cl, 0
+1   168	016A  75 E8				     jne @@Next
+1   169
+1   170	016C  FE CF				     dec bh			     ; amount -- (fictive line)
+1   171
+Turbo Assembler	 Version 4.1	    02/17/25 24:15:59	    Page 4
+frame.asm
+
+
+
+1   172	016E  C3				     ret
+1   173	016F					     endp
+1   174
+1   175				     ;-----------------------------------------------------------------------------
+1   176				     ;Prints string until '$' centered in line
+1   177				     ;Entry: DI	- destination address
+1   178				     ;		     SI	- string address
+1   179				     ;	     DX	- frame	width
+1   180				     ;Exit:  DI	- not changed
+1   181				     ;Destr: SI, BP, CX, AL
+1   182				     ;-----------------------------------------------------------------------------
+1   183	016F			     printStrCent    proc
+1   184
+1   185	016F  8B EF				     mov bp, di			     ; bp = di
+1   186
+1   187	0171  8B FE				     mov di, si			     ; di = si
+1   188
+1   189	0173  8C D8				     mov ax, ds			     ; set es from video segment
+1   190	0175  8E C0				     mov es, ax			     ; to data segment
+1   191						     STR_LEN
+2   192	0177  B0 24				     mov al, '$'	     ; set terminating symbol
+2   193	0179  33 C9				     xor cx, cx		     ; cx = 0
+2   194	017B  49				     dec cx		     ; cx--
+2   195	017C  F2> AE				     repne scasb	     ; while ((cx--) and al != es:[di])
+2   196	017E  F7 D9				     neg cx		     ; cx = -cx
+2   197	0180  49				     dec cx		     ; cx--
+1   198	0181  49				     dec cx
+1   199
+1   200	0182  8B FD				     mov di, bp			     ; di = bp
+1   201
+1   202	0184  F7 D9				     neg cx			     ; cx - x shift relative to	frame
+1   203	0186  03 CA				     add cx, dx			     ;
+1   204	0188  D1 E9				     shr cx, 1			     ;
+1   205
+1   206	018A  8B EF				     mov bp, di			     ; save di
+1   207
+1   208	018C  03 F9				     add di, cx			     ; x shift
+1   209	018E  03 F9				     add di, cx			     ;
+1   210
+1   211	0190  B8 B800				     mov ax, VIDEOSEG		     ; return es to
+1   212	0193  8E C0				     mov es, ax			     ; video segment
+1   213
+1   214	0195			     @@Next:
+1   215	0195  A4				     movsb			     ; es:[di++] = ds:[si++]
+1   216	0196  47				     inc di			     ; di++
+1   217
+1   218	0197  80 3C 24				     cmp byte ptr [si],	'$'
+1   219	019A  75 F9				     jne @@Next
+1   220
+1   221	019C  46				     inc si			     ; si++
+1   222	019D  80 3C 24				     cmp byte ptr[si], '$'
+1   223	01A0  75 05				     jne @@Done
+1   224
+1   225	01A2  B8 4C00				     mov ax, 4c00h
+1   226	01A5  CD 21				     int 21h
+1   227	01A7			     @@Done:
+1   228	01A7  8B FD				     mov di, bp			     ; return in the start of the
+Turbo Assembler	 Version 4.1	    02/17/25 24:15:59	    Page 5
+frame.asm
+
+
+
+1   229										     ; line
+1   230
+1   231	01A9  C3				     ret
+1   232	01AA					     endp
+1   233
+1   234				     ;-----------------------------------------------------------------------------
+1   235				     ;Prints set amount	of strings divided by '$'
+1   236				     ;Entry: DI	- destination address
+1   237				     ;		     SI	- string address
+1   238				     ;		     BX	- amount of strings
+1   239				     ;	     DX	- frame	width
+1   240				     ;Exit:  None
+1   241				     ;Destr: BX, DI, SI
+1   242				     ;-----------------------------------------------------------------------------
+1   243	01AA			     printStrs	     proc
+1   244
+1   245	01AA			     @@Next:
+1   246	01AA  E8 FFC2				     call printStrCent
+1   247
+1   248	01AD  81 C7 00A0			     add di, 160	     ; jump on the next	line
+1   249	01B1  4B				     dec bx		     ; bx--
+1   250
+1   251	01B2  83 FB 00				     cmp bx, 0
+1   252	01B5  7F F3				     jg	@@Next
+1   253
+1   254	01B7  C3				     ret
+1   255	01B8					     endp
+1   256
+    257				     ;-----------------------------------------------------------------------------
+    258
+    259	01B8			     Main:
+    260						     CLEAR_SCREEN
+1   261	01B8  B4 09				     mov ah, 09h
+1   262	01BA  BA 033Cr				     mov dx, offset CLEAR_VIEW
+1   263	01BD  CD 21				     int 21h
+    264
+    265	01BF  BE 0081				     mov si, 81h	     ; si = 81h	(start of the cmd line mem)
+    266
+    267	01C2  E8 FF3E				     call skipSpaces	     ; get width from cmd line
+    268	01C5  E8 FF44				     call getDec	     ;
+    269
+    270	01C8  8B D0				     mov dx, ax		     ; dx = ax
+    271
+    272	01CA  E8 FF36				     call skipSpaces	     ; get height from cmd line
+    273	01CD  E8 FF3C				     call getDec	     ;
+    274
+    275	01D0  8B F8				     mov di, ax		     ; di = ax
+    276
+    277	01D2  8B DF				     mov bx, di		     ;
+    278	01D4  C1 E3 08				     shl bx, 8		     ; bx = height:width (from cmd)
+    279	01D7  8A DA				     mov bl, dl		     ;
+    280
+    281	01D9  E8 008B				     call colorStyle	     ; set STYLE and COLOR_ATTR
+    282
+    283	01DC  89 36 02E9r			     mov MESSAGE, si	     ; MESSAGE = si
+    284
+    285	01E0  53				     push bx		     ; save bx
+Turbo Assembler	 Version 4.1	    02/17/25 24:15:59	    Page 6
+frame.asm
+
+
+
+    286
+    287	01E1  8B 3E 02E9r			     mov di, MESSAGE	     ; di = MESSAGE
+    288	01E5  E8 FF6A				     call maxStrLenNum
+    289
+    290	01E8  80 C7 06				     add bh, 6
+    291	01EB  80 C3 06				     add bl, 6
+    292
+    293	01EE  58				     pop ax		     ; ax = bx (before maxStrLenNum)
+    294	01EF  53				     push bx		     ; save frame MESSAGE height:width
+    295
+    296	01F0  3A C3				     cmp al, bl			     ; if (al >	bh)
+    297	01F2  7E 02				     jle @@Width_Done		     ; then
+    298	01F4  8A D8				     mov bl, al			     ; bl = al
+    299
+    300	01F6			     @@Width_Done:
+    301
+    302	01F6  3A E7				     cmp ah, bh			     ; if (ah >	bh)
+    303	01F8  7E 02				     jle @@Height_Done		     ; then
+    304	01FA  8A FC				     mov bh, ah			     ; bh = ah
+    305
+    306	01FC			     @@Height_Done:
+    307
+    308	01FC  33 D2				     xor dx, dx		     ;
+    309	01FE  8A D3				     mov dl, bl		     ; dx = frame width
+    310
+    311	0200  33 FF				     xor di, di		     ;
+    312	0202  8B FB				     mov di, bx		     ; di = frame height
+    313	0204  C1 EF 08				     shr di, 8		     ;
+    314
+    315	0207  58				     pop ax		     ; ax = height:width for MESSAGE frame
+    316
+    317	0208  E8 0098				     call frameUltimate
+    318
+    319				     ;-----------------------------------------------------------------------------
+    320				     ;Counts memory address of the character on	x and y	coords in videosegment
+    321				     ;Entry: DX	- x coord
+    322				     ;	     DI	- y coord
+    323				     ;Exit:  DI	- memory adress	of the character
+    324				     ;Destr: DI, AX
+    325				     ;-----------------------------------------------------------------------------
+    326	020B			     firstCharAddr   proc
+    327
+    328	020B  8B C7				     mov ax, di			     ;
+    329	020D  C1 E7 06				     shl di, 6			     ;
+    330	0210  C1 E0 04				     shl ax, 4			     ; count memory adress
+    331	0213  03 F8				     add di, ax			     ;
+    332	0215  03 FA				     add di, dx			     ;
+    333	0217  D1 E7				     shl di, 1			     ;
+    334
+    335	0219  C3				     ret
+    336	021A					     endp
+    337
+    338				     ;-----------------------------------------------------------------------------
+    339				     ;Counts x and y coords of the beginning of	the frame for it to be centered
+    340				     ;with given width and height
+    341				     ;Entry: DX	- width
+    342				     ;	     DI	- height
+Turbo Assembler	 Version 4.1	    02/17/25 24:15:59	    Page 7
+frame.asm
+
+
+
+    343				     ;Exit:  DX	- x coord
+    344				     ;	     DI	- y coord
+    345				     ;Destr: DX, DI
+    346				     ;-----------------------------------------------------------------------------
+    347	021A			     centerXY	     proc
+    348
+    349	021A  F7 DA				     neg dx		     ;
+    350	021C  83 C2 50				     add dx, 80		     ; x coord of left-top corner
+    351	021F  D1 EA				     shr dx, 1		     ;
+    352
+    353	0221  F7 DF				     neg di		     ;
+    354	0223  83 C7 19				     add di, 25		     ; y coord of left-top corner
+    355	0226  D1 EF				     shr di, 1		     ;
+    356
+    357	0228  C3				     ret
+    358	0229					     endp
+    359
+    360				     ;-----------------------------------------------------------------------------
+    361				     ;Draws a line of characters in 3 byte string (122..223)
+    362				     ;Entry: DI	- memory address of the	1st character in videosegment
+    363				     ;	     SI	- memory address of 3 byte string
+    364				     ;	     AH	- color	attribute
+    365				     ;	     CX	- line width
+    366				     ;Exit:  None
+    367				     ;Destr: DI, SI, CX, AL
+    368				     ;-----------------------------------------------------------------------------
+    369	0229			     drawLine	     proc
+    370
+    371	0229  AC				     lodsb			     ; draw 1st	character
+    372	022A  AB				     stosw			     ;
+    373
+    374	022B  83 E9 02				     sub cx, 2			     ;
+    375	022E  AC				     lodsb			     ; draw middle part	(2nd chars)
+    376	022F  F3> AB				     rep stosw			     ;
+    377
+    378	0231  AC				     lodsb			     ; draw 3rd	character
+    379	0232  AB				     stosw			     ;
+    380
+    381	0233  C3				     ret
+    382	0234					     endp
+    383
+    384				     ;-----------------------------------------------------------------------------
+    385				     ;Draws a frame of characters in 9 byte string
+    386				     ;Entry: DI	- memory address of the	1st character of the frame
+    387				     ;	     AH	- color	attribute
+    388				     ;	     BX	- frame	height
+    389				     ;	     DX	- line width
+    390				     ;	     SI	- memory address of 9 byte string
+    391				     ;Exit:  DI	- memory address of the	1st character of the frame
+    392				     ;	     DX	- frame	width
+    393				     ;Destr: AL, BX, CX, SI, DI, BP
+    394				     ;-----------------------------------------------------------------------------
+    395	0234			     drawFrame	     proc
+    396
+    397	0234  8B EF				     mov bp, di			     ; save di for strings
+    398
+    399	0236  8B CA				     mov cx, dx			     ; draw 1st	line
+Turbo Assembler	 Version 4.1	    02/17/25 24:15:59	    Page 8
+frame.asm
+
+
+
+    400	0238  E8 FFEE				     call drawLine		     ;
+    401
+    402	023B  83 EB 02				     sub bx, 2
+    403	023E			     @@Next:
+    404						     SHIFT_TO_NEXT_LINE
+1   405	023E  2B FA				     sub di, dx		     ; shift in	line
+1   406	0240  2B FA				     sub di, dx		     ; di = di - 2*dx
+1   407	0242  81 C7 00A0			     add di, 160	     ; jump on the next	line
+    408
+    409	0246  8B CA				     mov cx, dx			     ; revive width
+    410
+    411	0248  E8 FFDE				     call drawLine
+    412
+    413	024B  83 EE 03				     sub si, 3			     ; return to 456 chars in str
+    414	024E  4B				     dec bx			     ; height--
+    415	024F  83 FB 00				     cmp bx, 0
+    416	0252  77 EA				     ja	@@Next
+    417
+    418						     SHIFT_TO_NEXT_LINE
+1   419	0254  2B FA				     sub di, dx		     ; shift in	line
+1   420	0256  2B FA				     sub di, dx		     ; di = di - 2*dx
+1   421	0258  81 C7 00A0			     add di, 160	     ; jump on the next	line
+    422
+    423	025C  83 C6 03				     add si, 3			     ; *(si) = 7 (in 9 bytes str)
+    424	025F  8B CA				     mov cx, dx			     ; revive width
+    425
+    426	0261  E8 FFC5				     call drawLine
+    427
+    428	0264  8B FD				     mov di, bp			     ; revive di
+    429
+    430	0266  C3				     ret
+    431	0267					     endp
+    432
+    433				     ;-----------------------------------------------------------------------------
+    434				     ;Sets COLOR_ATTR and STYLE
+    435				     ;Entry: SI	- addressed on color index (or spaces before it)
+    436				     ;Exit:  SI	- addressed on message
+    437				     ;Destr: AX, SI, DX,
+    438				     ;-----------------------------------------------------------------------------
+    439	0267			     colorStyle	     proc
+    440
+    441	0267  E8 FE99				     call skipSpaces	     ;
+    442	026A  E8 FEBC				     call getHex	     ; get color attribute
+    443	026D  A2 02E6r				     mov COLOR_ATTR, al	     ;
+    444
+    445	0270  E8 FE90				     call skipSpaces	     ;
+    446	0273  80 3C 30				     cmp byte ptr[si], '0'   ; get style index
+    447	0276  75 0E				     jne @@Set_Style	     ;
+    448
+    449	0278  46				     inc si
+    450	0279  E8 FE87				     call skipSpaces
+    451
+    452	027C  89 36 02E7r			     mov STYLE,	si	     ; save style address
+    453	0280  83 C6 09				     add si, 9		     ; skip style for message
+    454	0283  EB 1D 90				     jmp @@Style_Done
+    455
+    456	0286			     @@Set_Style:
+Turbo Assembler	 Version 4.1	    02/17/25 24:15:59	    Page 9
+frame.asm
+
+
+
+    457	0286  33 D2				     xor dx, dx		     ;
+    458	0288  8A 14				     mov dl, byte ptr[si]    ; get style index - 1
+    459	028A  80 EA 31				     sub dl, '1'	     ;
+    460
+    461	028D  8B C2				     mov ax, dx			     ;
+    462	028F  C1 E2 03				     shl dx, 3			     ;
+    463	0292  03 D0				     add dx, ax			     ; get style address
+    464	0294  89 16 02E7r			     mov STYLE,	dx		     ;
+    465	0298  81 06 02E7r 02EBr			     add STYLE,	offset SET_STYLES    ;
+    466	029E  46				     inc si			     ;
+    467	029F  E8 FE61				     call skipSpaces
+    468	02A2			     @@Style_Done:
+    469
+    470	02A2  C3				     ret
+    471	02A3					     endp
+    472
+    473				     ;-----------------------------------------------------------------------------
+    474				     ;Counts coords, draws frame and prints MESSAGE
+    475				     ;-----------------------------------------------------------------------------
+    476	02A3			     frameUltimate proc
+    477	02A3  50				     push ax		     ; save height:width for MESSAGE frame
+    478	02A4  52				     push dx		     ; save frame width
+    479
+    480	02A5  E8 FF72				     call centerXY	     ; find left-top corner coords
+    481									     ; to center the frame
+    482
+    483	02A8  E8 FF60				     call firstCharAddr	     ; find left-top corner address
+    484
+    485	02AB  68 B800				     push VIDEOSEG	     ; set video segment address
+    486	02AE  07				     pop es		     ; in es: es = b800h
+    487
+    488	02AF  8A 26 02E6r			     mov ah, COLOR_ATTR	     ; revive color attribute
+    489	02B3  8B 36 02E7r			     mov si, STYLE	     ; si = STYLE
+    490	02B7  5A				     pop dx		     ; revive frame width
+    491	02B8  C1 EB 08				     shr bx, 8		     ; bx (height:width->00:height)
+    492
+    493	02BB  E8 FF76				     call drawFrame
+    494
+    495	02BE  58				     pop ax		     ; revive height:width for MESSAGE frame
+    496	02BF  80 EC 06				     sub ah, 6		     ;
+    497	02C2  8A C2				     mov al, dl		     ; center by height	in frame
+    498	02C4  52				     push dx		     ; save frame width
+    499	02C5  33 FF				     xor di, di		     ; di = 0
+    500	02C7  33 D2				     xor dx, dx		     ; dx = 0
+    501
+    502	02C9  8A D0				     mov dl, al		     ; dl = al (width)
+    503	02CB  8B F8				     mov di, ax		     ; di = ax (height:width)
+    504	02CD  C1 EF 08				     shr di, 8		     ; di >> 8 (00:height)
+    505
+    506	02D0  57				     push di		     ; save amonut of strings
+    507
+    508	02D1  E8 FF46				     call centerXY
+    509	02D4  E8 FF34				     call firstCharAddr
+    510
+    511	02D7  8B 36 02E9r			     mov si, MESSAGE	     ; si = MESSAGE
+    512
+    513	02DB  5B				     pop bx			     ; bx = amount of strings
+Turbo Assembler	 Version 4.1	    02/17/25 24:15:59	    Page 10
+frame.asm
+
+
+
+    514	02DC  5A				     pop dx			     ; dx = frame width
+    515
+    516	02DD  E8 FECA				     call printStrs	     ; print MESSAGE
+    517
+    518	02E0  B8 4C00				     mov ax, 4c00h
+    519	02E3  CD 21				     int 21h		     ; exit(0)
+    520
+    521	02E5  C3				     ret
+    522	02E6					     endp
+    523
+    524	02E6  ??		     COLOR_ATTR	     db	?
+    525	02E7  ????		     STYLE	     dw	?
+    526	02E9  ????		     MESSAGE	     dw	?
+    527	02EB  DA C4 BF B3 20 B3	C0+  SET_STYLES	     db	218d, 196d, 191d, 179d,	32d, 179d, 192d, 196d, 217d, \
+    528	      C4 D9 C9 CD BB BA	20+		     201d, 205d, 187d, 186d, 32d, 186d,	200d, 205d, 188d,    \
+    529	      BA C8 CD BC 03 03	03+		     3d, 3d, 3d, 3d, 32d, 3d, 3d, 3d, 3d,		     \
+    530	      03 20 03 03 03 03	2B+		     "+-+I I+-+",					     \
+    531	      2D 2B 49 20 49 2B	2D+		     "+=+I I+=+",					     \
+    532	      2B 2B 3D 2B 49 20	49+		     "1234 6789",					     \
+    533	      2B 3D 2B 31 32 33	34+		     16d, 22d, 17d, 16d, 32d, 17d, 16d,	22d, 17d,	     \
+    534	      20 36 37 38 39 10	16+		     3d, 3d, 3d, 4d, 32d, 5d, 6d, 6d, 6d,		     \
+    535	      11 10 20 11 10 16	11+		     1d, 1d, 1d, 2d, 32d, 2d, 1d, 1d, 1d
+    536	      03 03 03 04 20 05	06+
+    537	      06 06 01 01 01 02	20+
+    538	      02 01 01 01
+    539
+    540	033C  0A 0A 0A 0A 0A 0A	0A+  CLEAR_VIEW	     db	0ah, 0ah, 0ah, 0ah, 0ah, 0ah, 0ah, 0ah,	0ah, 0ah, 0ah,	\
+    541	      0A 0A 0A 0A 0A 0A	0A+		     0ah, 0ah, 0ah, 0ah, 0ah, 0ah, 0ah,	0ah, 0ah, 0ah, 0ah,  \
+    542	      0A 0A 0A 0A 0A 0A	0A+		     0ah, 0ah, 0ah, 0ah, '$'
+    543	      0A 0A 0A 0A 0A 24
+    544
+    545				     end	     Start
+Turbo Assembler	 Version 4.1	    02/17/25 24:15:59	    Page 11
+Symbol Table
+
+
+
+
+Symbol Name			  Type	 Value
+
+??DATE				  Text	 "02/17/25"
+??FILENAME			  Text	 "frame	  "
+??TIME				  Text	 "24:15:59"
+??VERSION			  Number 040A
+@32BIT				  Text	 0
+@@CONDITION			  Near	 DGROUP:0149
+@@DEC				  Near	 DGROUP:0142
+@@DONE				  Near	 DGROUP:010B
+@@DONE				  Near	 DGROUP:01A7
+@@ELSE				  Near	 DGROUP:0167
+@@HEIGHT_DONE			  Near	 DGROUP:01FC
+@@HEX				  Near	 DGROUP:0135
+@@NEXT				  Near	 DGROUP:0103
+@@NEXT				  Near	 DGROUP:010E
+@@NEXT				  Near	 DGROUP:012B
+@@NEXT				  Near	 DGROUP:0154
+@@NEXT				  Near	 DGROUP:0195
+@@NEXT				  Near	 DGROUP:01AA
+@@NEXT				  Near	 DGROUP:023E
+@@SET_STYLE			  Near	 DGROUP:0286
+@@STYLE_DONE			  Near	 DGROUP:02A2
+@@WIDTH_DONE			  Near	 DGROUP:01F6
+@CODE				  Text	 DGROUP
+@CODESIZE			  Text	 0
+@CPU				  Text	 0103H
+@CURSEG				  Text	 _TEXT
+@DATA				  Text	 DGROUP
+@DATASIZE			  Text	 0
+@FILENAME			  Text	 FRAME
+@INTERFACE			  Text	 000H
+@MODEL				  Text	 1
+@STACK				  Text	 DGROUP
+@WORDSIZE			  Text	 2
+CENTERXY			  Near	 DGROUP:021A
+CLEAR_VIEW			  Byte	 DGROUP:033C
+COLORSTYLE			  Near	 DGROUP:0267
+COLOR_ATTR			  Byte	 DGROUP:02E6
+DRAWFRAME			  Near	 DGROUP:0234
+DRAWLINE			  Near	 DGROUP:0229
+FIRSTCHARADDR			  Near	 DGROUP:020B
+FRAMEULTIMATE			  Near	 DGROUP:02A3
+GETDEC				  Near	 DGROUP:010C
+GETHEX				  Near	 DGROUP:0129
+MAIN				  Near	 DGROUP:01B8
+MAXSTRLENNUM			  Near	 DGROUP:0152
+MESSAGE				  Word	 DGROUP:02E9
+PRINTSTRCENT			  Near	 DGROUP:016F
+PRINTSTRS			  Near	 DGROUP:01AA
+SET_STYLES			  Byte	 DGROUP:02EB
+SKIPSPACES			  Near	 DGROUP:0103
+START				  Near	 DGROUP:0100
+STYLE				  Word	 DGROUP:02E7
+VIDEOSEG			  Number B800
+Turbo Assembler	 Version 4.1	    02/17/25 24:15:59	    Page 12
+Symbol Table
+
+
+
+
+Macro Name
+
+CLEAR_SCREEN
+SHIFT_TO_NEXT_LINE
+STR_LEN
+
+Groups & Segments		  Bit Size Align  Combine Class
+
+DGROUP				  Group
+  _DATA				  16  0000 Word	  Public  DATA
+  _TEXT				  16  0357 Word	  Public  CODE
+

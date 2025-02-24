@@ -1,0 +1,221 @@
+Turbo Assembler	 Version 4.1	    02/18/25 10:26:58	    Page 1
+resident.asm
+
+
+
+      1	0000			     .model tiny
+      2	0000			     .code
+      3				     .186
+      4				     locals @@
+      5				     org 100h
+      6
+      7	      =B800		     VIDEOSEG	     equ     0b800h
+      8
+      9				     SHIFT_TO_NEXT_LINE	     macro
+     10
+     11					     add di, 160
+     12					     sub di, 22
+     13
+     14					     endm
+     15
+     16	0100			     Main:
+     17	0100  33 C0			     xor ax, ax		     ; ax = 0
+     18	0102  8E C0			     mov es, ax		     ; es = 0
+     19
+     20	0104  BB 0024			     mov bx, 09h * 4	     ; 09h interruption
+     21								     ; 4 bytes for address
+     22	0107  26: 8B 07			     mov ax, es:[bx]
+     23	010A  A3 0155r			     mov Old09Ofs, ax
+     24	010D  26: 8B 47	02		     mov ax, es:[bx + 2]
+     25	0111  A3 0157r			     mov Old09Seg, ax
+     26
+     27	0114  FA			     cli		     ; if = 0 (clear if)
+     28
+     29	0115  26: C7 07	012Er		     mov es:[bx], offset newInt09    ; set shift
+     30
+     31	011A  0E			     push cs			     ; ax = cs
+     32	011B  58			     pop ax			     ;
+     33
+     34	011C  26: 89 47	02		     mov es:[bx	+ 2], ax	     ; set segment address
+     35
+     36	0120  FB			     sti		     ; if = 1 (set if)
+     37
+     38	0121  CD 09			     int 09h
+     39
+     40	0123  B4 31			     mov ah, 31h	     ; exit with reserving memory for resident
+     41	0125  BA 01B0r			     mov dx, offset EOF
+     42	0128  C1 EA 04			     shr dx, 4		     ; 31h counts in paragraphs
+     43	012B  42			     inc dx
+     44	012C  CD 21			     int 21h
+     45
+     46	012E			     newInt09	     proc
+     47
+     48	012E  50 53 51 52 56 57	1E+	     push ax bx	cx dx si di ds es    ; save registers not to fuck them up
+     49	      06
+     50
+     51	0136  B4 4E			     mov ah, 4eh
+     52	0138  BF 0320			     mov di, 5 * 80 * 2
+     53
+     54	013B  FC			     cld
+     55
+     56	013C  E4 61			     in	al, 61h		     ;
+     57	013E  8A E0			     mov ah, al		     ; blink enable/disable keyboard
+Turbo Assembler	 Version 4.1	    02/18/25 10:26:58	    Page 2
+resident.asm
+
+
+
+     58	0140  0C 80			     or	al, 80h		     ; to let keyboard controller know
+     59	0142  E6 61			     out 61h, al	     ; that changes done
+     60	0144  8A C4			     mov al, ah		     ;
+     61	0146  E6 61			     out 61h, al	     ; KC needs	it
+     62
+     63	0148  B0 20			     mov al, 20h	     ; send EOI	signal
+     64	014A  E6 20			     out 20h, al	     ; IC needs	it
+     65
+     66					     ;call drawFrame
+     67
+     68	014C  07 1F 5F 5E 5A 59	5B+	     pop es ds di si dx	cx bx ax	     ; revive registers
+     69	      58
+     70								     ; done our	deel without attention
+     71	0154			     ChainOldISR:
+     72	0154  EA			     db	0eah
+     73	0155  0000		     Old09Ofs	     dw	0
+     74	0157  0000		     Old09Seg	     dw	0
+     75
+     76	0159  B8 B800			     mov ax, VIDEOSEG
+     77	015C  8E C0			     mov es, ax
+     78
+     79	015E  B4 00			     mov ah, 00h
+     80	0160  CD 16			     int 16h
+     81	0162  B4 4E			     mov ah, 4eh
+     82	0164  AB			     stosw
+     83
+     84	0165  CF			     iret
+     85	0166				     endp
+     86
+     87				     ;-----------------------------------------------------------------------------
+     88				     ;Draws frame 6x11 with STYLE; left-top corner coordinates (65, 5)
+     89				     ;Entry: None
+     90				     ;Exit:  None
+     91				     ;Destr:
+     92				     ;-----------------------------------------------------------------------------
+     93	0166			     drawFrame	     proc
+     94
+     95	0166  B8 B800			     mov ax, VIDEOSEG
+     96	0169  8E C0			     mov es, ax
+     97	016B  0E			     push cs
+     98	016C  1F			     pop ds
+     99
+    100	016D  B4 07			     mov ah, 7		     ; black back, white fore
+    101	016F  BF 03A2			     mov di, 930	     ; (65, 5)
+    102	0172  BE 01A7r			     mov si, offset cs:STYLE ; set style
+    103
+    104	0175  E8 0024			     call drawLine
+    105					     SHIFT_TO_NEXT_LINE
+1   106
+1   107	0178  81 C7 00A0		     add di, 160
+1   108	017C  83 EF 16			     sub di, 22
+1   109
+    110
+    111	017F  BB 0009			     mov bx, 9
+    112	0182			     @@Next:
+    113	0182  E8 0017			     call drawLine
+    114
+Turbo Assembler	 Version 4.1	    02/18/25 10:26:58	    Page 3
+resident.asm
+
+
+
+    115	0185  83 EE 03			     sub si, 3
+    116					     SHIFT_TO_NEXT_LINE
+1   117
+1   118	0188  81 C7 00A0		     add di, 160
+1   119	018C  83 EF 16			     sub di, 22
+1   120
+    121	018F  4B			     dec bx
+    122
+    123	0190  83 FB 00			     cmp bx, 0
+    124	0193  75 ED			     jne @@Next
+    125
+    126	0195  83 C6 03			     add si, 3
+    127	0198  E8 0001			     call drawLine
+    128
+    129	019B  C3			     ret
+    130	019C				     endp
+    131
+    132
+    133				     ;-----------------------------------------------------------------------------
+    134				     ;Draws a line of 11 characters in 3 byte string (12222222223)
+    135				     ;Entry: DI	- memory address of the	1st character in videosegment
+    136				     ;	     SI	- memory address of 3 byte string
+    137				     ;Exit:  None
+    138				     ;Destr: DI, SI, CX, AL
+    139				     ;-----------------------------------------------------------------------------
+    140	019C			     drawLine	     proc
+    141
+    142	019C  B9 0009				     mov cx, 9
+    143
+    144	019F  AC				     lodsb			     ; draw 1st	character
+    145	01A0  AB				     stosw			     ;
+    146
+    147	01A1  AC				     lodsb			     ; draw middle part	(2nd chars)
+    148	01A2  F3> AB				     rep stosw			     ;
+    149
+    150	01A4  AC				     lodsb			     ; draw 3rd	character
+    151	01A5  AB				     stosw			     ;
+    152
+    153	01A6  C3				     ret
+    154	01A7					     endp
+    155
+    156	01A7  DA C4 BF B3 20 B3	C0+  STYLE:	     db	218d, 196d, 191d, 179d,	32d, 179d, 192d, 196d, 217d
+    157	      C4 D9
+    158
+    159	01B0			     EOF:
+    160				     end	     Main
+Turbo Assembler	 Version 4.1	    02/18/25 10:26:58	    Page 4
+Symbol Table
+
+
+
+
+Symbol Name			  Type	 Value
+
+??DATE				  Text	 "02/18/25"
+??FILENAME			  Text	 "resident"
+??TIME				  Text	 "10:26:58"
+??VERSION			  Number 040A
+@32BIT				  Text	 0
+@@NEXT				  Near	 DGROUP:0182
+@CODE				  Text	 DGROUP
+@CODESIZE			  Text	 0
+@CPU				  Text	 0103H
+@CURSEG				  Text	 _TEXT
+@DATA				  Text	 DGROUP
+@DATASIZE			  Text	 0
+@FILENAME			  Text	 RESIDENT
+@INTERFACE			  Text	 000H
+@MODEL				  Text	 1
+@STACK				  Text	 DGROUP
+@WORDSIZE			  Text	 2
+CHAINOLDISR			  Near	 DGROUP:0154
+DRAWFRAME			  Near	 DGROUP:0166
+DRAWLINE			  Near	 DGROUP:019C
+EOF				  Near	 DGROUP:01B0
+MAIN				  Near	 DGROUP:0100
+NEWINT09			  Near	 DGROUP:012E
+OLD09OFS			  Word	 DGROUP:0155
+OLD09SEG			  Word	 DGROUP:0157
+STYLE				  Near	 DGROUP:01A7
+VIDEOSEG			  Number B800
+
+Macro Name
+
+SHIFT_TO_NEXT_LINE
+
+Groups & Segments		  Bit Size Align  Combine Class
+
+DGROUP				  Group
+  _DATA				  16  0000 Word	  Public  DATA
+  _TEXT				  16  01B0 Word	  Public  CODE
+

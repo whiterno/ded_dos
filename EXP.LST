@@ -1,0 +1,57 @@
+Turbo Assembler	 Version 4.1	    02/09/25 19:02:14	    Page 1
+exp.asm
+
+
+
+      1	0000			     .model tiny
+      2	0000			     .code
+      3				     org 100h
+      4
+      5	0100			     Start:
+      6	0100  B4 01				     mov ah, 01h
+      7	0102  CD 21				     int 21h
+      8	0104  8A D0				     mov dl, al
+      9	0106  B4 02				     mov ah, 02h
+     10	0108  CD 21				     int 21h
+     11
+     12	010A  B8 4C00				     mov ax, 4c00h
+     13	010D  CD 21				     int 21h
+     14
+     15	010F  48 65 6C 6C 6F 21	0D+  String	     db	"Hello!", 0dh, 0ah, '$'
+     16	      0A 24
+     17	0118  010Fr		     As		     dw	String
+     18				     end	     Start
+Turbo Assembler	 Version 4.1	    02/09/25 19:02:14	    Page 2
+Symbol Table
+
+
+
+
+Symbol Name			  Type	 Value
+
+??DATE				  Text	 "02/09/25"
+??FILENAME			  Text	 "exp	  "
+??TIME				  Text	 "19:02:14"
+??VERSION			  Number 040A
+@32BIT				  Text	 0
+@CODE				  Text	 DGROUP
+@CODESIZE			  Text	 0
+@CPU				  Text	 0101H
+@CURSEG				  Text	 _TEXT
+@DATA				  Text	 DGROUP
+@DATASIZE			  Text	 0
+@FILENAME			  Text	 EXP
+@INTERFACE			  Text	 000H
+@MODEL				  Text	 1
+@STACK				  Text	 DGROUP
+@WORDSIZE			  Text	 2
+AS				  Word	 DGROUP:0118
+START				  Near	 DGROUP:0100
+STRING				  Byte	 DGROUP:010F
+
+Groups & Segments		  Bit Size Align  Combine Class
+
+DGROUP				  Group
+  _DATA				  16  0000 Word	  Public  DATA
+  _TEXT				  16  011A Word	  Public  CODE
+

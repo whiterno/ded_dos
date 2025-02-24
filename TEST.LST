@@ -1,0 +1,57 @@
+Turbo Assembler	 Version 4.1	    02/13/25 13:00:49	    Page 1
+test.asm
+
+
+
+      1	0000			     .model tiny
+      2	0000			     .code
+      3				     org 100h
+      4
+      5	0100  33 C0		     Start:  xor ax, ax
+      6
+      7	0102  A1 0102r		     MK:     mov ax, MK
+**Error** test.asm(7) Operand types do not match
+      8
+      9	0105  B8 4C00			     mov ax, 4c00h
+     10	0108  CD 21			     int 21h
+     11
+     12				     end     Start
+Turbo Assembler	 Version 4.1	    02/13/25 13:00:49	    Page 2
+Symbol Table
+
+
+
+
+Symbol Name			  Type	 Value
+
+??DATE				  Text	 "02/13/25"
+??FILENAME			  Text	 "test	  "
+??TIME				  Text	 "13:00:49"
+??VERSION			  Number 040A
+@32BIT				  Text	 0
+@CODE				  Text	 DGROUP
+@CODESIZE			  Text	 0
+@CPU				  Text	 0101H
+@CURSEG				  Text	 _TEXT
+@DATA				  Text	 DGROUP
+@DATASIZE			  Text	 0
+@FILENAME			  Text	 TEST
+@INTERFACE			  Text	 000H
+@MODEL				  Text	 1
+@STACK				  Text	 DGROUP
+@WORDSIZE			  Text	 2
+MK				  Near	 DGROUP:0102
+START				  Near	 DGROUP:0100
+
+Groups & Segments		  Bit Size Align  Combine Class
+
+DGROUP				  Group
+  _DATA				  16  0000 Word	  Public  DATA
+  _TEXT				  16  010A Word	  Public  CODE
+Turbo Assembler	 Version 4.1	    02/13/25 13:00:49	    Page 3
+Error Summary
+
+
+
+**Error** test.asm(7) Operand types do not match
+

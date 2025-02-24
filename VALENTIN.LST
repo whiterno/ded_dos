@@ -1,0 +1,227 @@
+Turbo Assembler	 Version 4.1	    02/10/25 20:33:04	    Page 1
+valentin.asm
+
+
+
+      1	0000			     .model tiny
+      2	0000			     .code
+      3				     locals @@
+      4				     org 100h
+      5	0100			     Start:
+      6	0100  B8 000A				     mov ax, 10		     ; y coor
+      7	0103  BE 001E				     mov si, 30		     ; x coor
+      8	0106  B6 1E				     mov dh, 30		     ; width
+      9	0108  B2 00				     mov dl, 0		     ; initial shift
+     10
+     11	010A  BF 0005				     mov di, 5		     ; height
+     12	010D  E8 0039				     call drawFrame	     ; draw 1 line
+     13
+     14	0110  B8 4C00				     mov ax, 4c00h
+     15	0113  CD 21				     int 21h		     ; exit(0)
+     16
+     17				     ;-----------------------------------------------------------------------------
+     18				     ;Draws a line 122...223 with first	3 symbols (1,2,3) in given string
+     19				     ;Entry: SI	- character addr
+     20				     ;	     DH	- width
+     21				     ;	     DL	- shift	(to given string)
+     22				     ;Exit:  None
+     23				     ;Destr: AX, BX, CX, DX, SI, ES
+     24				     ;-----------------------------------------------------------------------------
+     25	0115			     drawLine	     proc
+     26
+     27						     ;set shift	from dl	to bx
+     28	0115  8A DA				     mov bl, dl
+     29	0117  B7 00				     mov bh, 00h
+     30
+     31	0119  8A 26 01C3r			     mov ah, byte ptr [CLR_ATTRS]	     ; ah = *(CLR_ATTRS)
+     32	011D  8A 87 01BAr			     mov al, byte ptr [bx + SYMBOLS]	     ; al = *(shift + SYMB)
+     33	0121  26: 89 04				     mov word ptr es:[si], ax		     ; es:[si] = ax
+     34
+     35						     ;set width	from dh	to dx
+     36	0124  8A D6				     mov dl, dh				     ; dl = dh
+     37	0126  B6 00				     mov dh, 00h			     ; dh = 00h
+     38
+     39						     ;width--
+     40						     ;change shift (to 2 in given string)
+     41						     ;inc character address (2 bytes per character)
+     42	0128  4A				     dec dx				     ; dx--
+     43	0129  43				     inc bx				     ; bx++
+     44	012A  83 C6 02				     add si, 2				     ; si += 2
+     45
+     46						     ;change ax	character (to 2	in given string)
+     47	012D  8A 87 01BAr			     mov al, byte ptr [bx + SYMBOLS]	     ; al = *(shift + SYMB)
+     48
+     49	0131  EB 08 90				     jmp @@Condition
+     50	0134			     Draw_Middle_Line:
+     51						     ;set character and	increase adr pointer
+     52	0134  26: 89 04				     mov word ptr es:[si], ax		     ; es:[si] = ax
+     53	0137  83 C6 02				     add si, 2				     ; si += 2
+     54	013A  4A				     dec dx				     ; width--
+     55	013B  83 FA 01		     @@Condition:    cmp dx, 1				     ; dx ? 1
+     56	013E  77 F4				     ja	Draw_Middle_Line		     ; if dx > 1 jump
+     57
+Turbo Assembler	 Version 4.1	    02/10/25 20:33:04	    Page 2
+valentin.asm
+
+
+
+     58						     ;set last symbol
+     59	0140  43				     inc bx				     ; shift++
+     60	0141  8A 87 01BAr			     mov al, byte ptr [bx + SYMBOLS]	     ; al = *(shift + SYMB)
+     61	0145  26: 89 04				     mov word ptr es:[si], ax
+     62
+     63	0148  C3		     @@Exit:	     ret
+     64	0149					     endp
+     65
+     66				     ;------------------------------------------------------------------------------
+     67				     ;Draws frame of symbols:
+     68				     ;takes first 9 symbols from given string and draws	frame 122..223
+     69				     ;							     455..556
+     70				     ;							     455..556
+     71				     ;							     ........
+     72				     ;							     455..556
+     73				     ;							     788..889
+     74				     ;Entry: AX	- y coord
+     75				     ;	     SI	- x coord
+     76				     ;	     DH	- width
+     77				     ;	     DI	- height
+     78				     ;Exit:  None
+     79				     ;Destr:
+     80				     ;------------------------------------------------------------------------------
+     81	0149			     drawFrame	     proc
+     82
+     83						     ;save dx
+     84	0149  B2 00				     mov dl, 00h			     ; dl = 0
+     85	014B  8B EA				     mov bp, dx				     ; bp = dx (dh * 64)
+     86
+     87						     ;set es to	modify videosegment
+     88	014D  B9 B800 90			     mov cx, VIDEOSEG
+     89	0151  8E C1				     mov es, cx
+     90
+     91						     ;save dx
+     92	0153  8B CA				     mov cx, dx
+     93
+     94						     ;get ax-line si-coord character addr
+     95	0155  BB 0050				     mov bx, 80
+     96	0158  F7 E3				     mul bx
+     97	015A  03 C6				     add ax, si
+     98	015C  D1 E0				     shl ax, 1
+     99
+    100						     ;revive dx
+    101	015E  8B D1				     mov dx, cx
+    102
+    103						     ;set shift	from dl	to bx
+    104	0160  8A DA				     mov bl, dl
+    105	0162  B7 00				     mov bh, 00h
+    106
+    107						     ;set memory-friendly register
+    108	0164  8B F0				     mov si, ax
+    109
+    110						     ;draw top line
+    111	0166  E8 FFAC				     call drawLine
+    112
+    113						     ;dec height, inc shift for	symbols
+    114	0169  4F				     dec di				     ; di--
+Turbo Assembler	 Version 4.1	    02/10/25 20:33:04	    Page 3
+valentin.asm
+
+
+
+    115	016A  83 C5 03				     add bp, 3				     ; bp += 3
+    116
+    117	016D  EB 22 90				     jmp @@Condition
+    118	0170			     Draw_Middle_Lines:
+    119						     ;set dx for func
+    120	0170  8B D5				     mov dx, bp
+    121
+    122						     ;set addr shift for next line
+    123	0172  8B C5				     mov ax, bp
+    124	0174  D1 E8 D1 E8 D1 E8	D1+		     shr ax, 8
+    125	      E8 D1 E8 D1 E8 D1	E8+
+    126	      D1 E8
+    127	0184  48				     dec ax
+    128	0185  D1 E0				     shl ax, 1
+    129
+    130						     ;shift addr
+    131	0187  81 C6 00A0			     add si, 160
+    132	018B  2B F0				     sub si, ax
+    133
+    134	018D  E8 FF85				     call drawLine
+    135
+    136						     ;dec height
+    137	0190  4F				     dec di
+    138
+    139	0191  83 FF 01		     @@Condition:    cmp di, 1
+    140	0194  77 DA				     ja	Draw_Middle_Lines
+    141
+    142						     ;set addr shift for final line
+    143	0196  8B C5				     mov ax, bp
+    144	0198  D1 E8 D1 E8 D1 E8	D1+		     shr ax, 8
+    145	      E8 D1 E8 D1 E8 D1	E8+
+    146	      D1 E8
+    147	01A8  48				     dec ax
+    148	01A9  D1 E0				     shl ax, 1
+    149
+    150	01AB  81 C6 00A0			     add si, 160
+    151	01AF  2B F0				     sub si, ax
+    152
+    153						     ;set final	shift for symbols
+    154	01B1  83 C5 03				     add bp, 3
+    155	01B4  8B D5				     mov dx, bp
+    156
+    157	01B6  E8 FF5C				     call drawLine
+    158
+    159	01B9  C3		     @@Exit:	     ret
+    160	01BA					     endp
+    161
+    162
+    163	      =B800		     VIDEOSEG	     equ 0b800h
+    164
+    165	01BA  2B 2D 2B 7C 2E 7C	2B+  SYMBOLS:	     db	"+-+|.|+-+"
+    166	      2D 2B
+    167	01C3  34		     CLR_ATTRS:	     db	00110100b
+    168
+    169				     end	     Start
+Turbo Assembler	 Version 4.1	    02/10/25 20:33:04	    Page 4
+Symbol Table
+
+
+
+
+Symbol Name			  Type	 Value
+
+??DATE				  Text	 "02/10/25"
+??FILENAME			  Text	 "valentin"
+??TIME				  Text	 "20:33:04"
+??VERSION			  Number 040A
+@32BIT				  Text	 0
+@@CONDITION			  Near	 DGROUP:013B
+@@CONDITION			  Near	 DGROUP:0191
+@@EXIT				  Near	 DGROUP:0148
+@@EXIT				  Near	 DGROUP:01B9
+@CODE				  Text	 DGROUP
+@CODESIZE			  Text	 0
+@CPU				  Text	 0101H
+@CURSEG				  Text	 _TEXT
+@DATA				  Text	 DGROUP
+@DATASIZE			  Text	 0
+@FILENAME			  Text	 VALENTIN
+@INTERFACE			  Text	 000H
+@MODEL				  Text	 1
+@STACK				  Text	 DGROUP
+@WORDSIZE			  Text	 2
+CLR_ATTRS			  Near	 DGROUP:01C3
+DRAWFRAME			  Near	 DGROUP:0149
+DRAWLINE			  Near	 DGROUP:0115
+DRAW_MIDDLE_LINE		  Near	 DGROUP:0134
+DRAW_MIDDLE_LINES		  Near	 DGROUP:0170
+START				  Near	 DGROUP:0100
+SYMBOLS				  Near	 DGROUP:01BA
+VIDEOSEG			  Number B800
+
+Groups & Segments		  Bit Size Align  Combine Class
+
+DGROUP				  Group
+  _DATA				  16  0000 Word	  Public  DATA
+  _TEXT				  16  01C4 Word	  Public  CODE
+
