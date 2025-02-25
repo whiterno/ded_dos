@@ -33,6 +33,7 @@ Style		db 201d, 205d, 187d, 186d, 32d, 186d, 200d, 205d, 188d
 X_coord		dw 0
 Y_coord		dw 0
 RegValues   db "AX 0000 BX 0000 CX 0000 DX 0000 SI 0000 DI 0000 BP 0000 SP 0000 DS 0000 CS 0000 ES 0000 SS 0000"
+Buffer      dw 176 dup(0)
 
 ;----------------------------------------------------------------------------
 ; New 09h interrupt, checks combination CTRL-F and if pushed makes xor 1 to
@@ -48,16 +49,19 @@ checkKeys	proc
 	int 16h
 
 	cmp al, 04h		; check if ctrl is pushed
-	jne cs:SkipActivate
+	jne cs:@@SkipActivate
 
 	in al, 60h
 
 	cmp al, HOT_KEY			; compare al and 33(F scancode)
-	jne cs:SkipActivate
+	jne cs:@@SkipActivate
 
+    mov al, cs:ActivateFlag             ; save old ActivateFlag
 	xor cs:ActivateFlag, 00000001b		; ActivateFlag xor 1
 
-    ; TODO: make 33h
+    cmp al, 1
+    je cs:@@SetFrame
+
 	mov ax, 03h
 	int 33h
 
@@ -66,9 +70,14 @@ checkKeys	proc
 
 	mov cs:X_coord, cx
 	mov cs:Y_coord, dx
-    ; TODO: make 33h
 
-SkipActivate:
+    call cs:saveFrame
+    jmp cs:@@SkipActivate
+
+@@SetFrame:
+    call cs:setFrame
+
+@@SkipActivate:
 
 	pop es ds si di dx cx bx ax		; return all registers
 
@@ -87,7 +96,7 @@ draw    	proc
 	pop ds
 
 	cmp cs:ActivateFlag, 0
-  	je cs:SkipDraw
+  	je cs:@@SkipDraw
 
     mov di, cs:Y_coord              ; y coord of the left-top corner of frame
     mov dx, cs:X_coord		; x coord
@@ -108,7 +117,7 @@ draw    	proc
 
     call cs:screenReg
 
-SkipDraw:
+@@SkipDraw:
 
     pop ax bx cx dx si di bp bx ds bx es bx bx
 
@@ -330,6 +339,83 @@ screenReg   proc
     ret
     endp
 
+;-----------------------------------------------------------------------------
+;Save frame to Buffer
+;Entry:	None
+;Exit: None
+;Destr:
+;-----------------------------------------------------------------------------
+saveFrame   proc
+    mov di, cs:Y_coord              ; y coord of the left-top corner of frame
+	mov dx, cs:X_coord		; x coord
+    call cs:firstCharAddr
+
+    mov si, offset cs:Buffer
+
+    mov ax, VIDEOSEG
+    mov es, ax
+
+    mov cx, 16      ;height
+    mov dx, 11      ;width for  macro
+@@Next:
+    mov bx, dx      ;width
+
+@@Line:
+    mov ax, word ptr es:[di]
+    add di, 2
+
+    mov word ptr cs:[si], ax
+    add si, 2
+
+    dec bx
+    cmp bx, 0
+    jne cs:@@Line
+
+    SHIFT_TO_NEXT_LINE
+
+    loop cs:@@Next
+
+    ret
+    endp
+
+;-----------------------------------------------------------------------------
+;Set frame from Buffer
+;Entry:	None
+;Exit: None
+;Destr:
+;-----------------------------------------------------------------------------
+setFrame   proc
+    mov di, cs:Y_coord              ; y coord of the left-top corner of frame
+	mov dx, cs:X_coord		; x coord
+    call cs:firstCharAddr
+
+    mov si, offset cs:Buffer
+
+    mov ax, VIDEOSEG
+    mov es, ax
+
+    mov ax, cs
+    mov ds, ax
+
+    mov cx, 16      ;height
+    mov dx, 11      ;width for  macro
+@@Next:
+    mov bx, dx      ;width
+
+@@Line:
+    lodsw
+    stosw
+
+    dec bx
+    cmp bx, 0
+    jne cs:@@Line
+
+    SHIFT_TO_NEXT_LINE
+
+    loop cs:@@Next
+
+    ret
+    endp
 
 EndOfResident:
 
