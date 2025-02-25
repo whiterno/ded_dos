@@ -4,9 +4,10 @@
 locals @@
 org 100h
 
-HOT_KEY		equ 	33
-VIDEOSEG	equ	0b800h
-REG_AMOUNT  equ 12
+HOT_KEY		    equ 	33
+VIDEOSEG	    equ	0b800h
+REG_AMOUNT      equ 12
+FRAME_WIDTH     equ 11
 
 ;-----------------------------------------------------------------------------
 ;Changes DI address to the beginning of the next line of frame
@@ -40,36 +41,36 @@ Buffer      dw 176 dup(0)
 ; ActivateFlag
 ;----------------------------------------------------------------------------
 checkKeys	proc
-	pushf
-	call cs:Old09Handler
+	pushf                           ; run old 09h interrupt
+	call cs:Old09Handler            ; handler
 
-	push ax bx cx dx di si ds es
+	push ax bx cx dx di si ds es    ; save registers
 
-	mov ah, 02h
-	int 16h
+	mov ah, 02h                     ; get keyboard shift flags value
+	int 16h                         ;
 
-	cmp al, 04h		; check if ctrl is pushed
+	cmp al, 04h		                ; check if ctrl is pushed
 	jne cs:@@SkipActivate
 
-	in al, 60h
+	in al, 60h                      ; check pushed key
 
-	cmp al, HOT_KEY			; compare al and 33(F scancode)
+	cmp al, HOT_KEY			        ; compare al and 33(F scancode)
 	jne cs:@@SkipActivate
 
     mov al, cs:ActivateFlag             ; save old ActivateFlag
 	xor cs:ActivateFlag, 00000001b		; ActivateFlag xor 1
 
-    cmp al, 1
+    cmp al, 1                           ; if frame is active
     je cs:@@SetFrame
 
-	mov ax, 03h
-	int 33h
+	mov ax, 03h                     ; get mouse coords
+	int 33h                         ; cx:dx = x:y
 
-	shr cx, 3
-	shr dx, 3
+	shr cx, 3                       ; required shift to get
+	shr dx, 3                       ; columns and rows
 
-	mov cs:X_coord, cx
-	mov cs:Y_coord, dx
+	mov cs:X_coord, cx              ; X_coord = cx
+	mov cs:Y_coord, dx              ; Y_coord = dx
 
     call cs:saveFrame
     jmp cs:@@SkipActivate
@@ -90,38 +91,38 @@ checkKeys	proc
 ; If ActivateFlag is 0 - returns to old 08h handler
 ;-----------------------------------------------------------------------------
 draw    	proc
-	push bx ss es cs ds sp bp di si dx cx bx ax
+	push bx ss es cs ds sp bp di si dx cx bx ax ; save registers
 
-	push cs
-	pop ds
+	push cs                 ; set ds tocs to use string funcs
+	pop ds                  ;
 
-	cmp cs:ActivateFlag, 0
-  	je cs:@@SkipDraw
+	cmp cs:ActivateFlag, 0  ; if ActivateFlag == 0 then skip draw
+  	je cs:@@SkipDraw        ;
 
-    mov di, cs:Y_coord              ; y coord of the left-top corner of frame
+    mov di, cs:Y_coord      ; y coord of the left-top corner of frame
     mov dx, cs:X_coord		; x coord
 	call cs:firstCharAddr
 
 	mov ax, VIDEOSEG        ; set videosegment address
 	mov es, ax              ; in es
 
-	mov ah, 00000111b       ; black back, red front
-	mov bx, REG_AMOUNT + 4  ; set frame height
-	mov dx, 11              ; set frame width
-	mov si, offset cs:Style        ; set frame style
+	mov ah, 00000111b               ; black back, white front
+	mov bx, REG_AMOUNT + 4          ; set frame height
+	mov dx, FRAME_WIDTH             ; set frame width
+	mov si, offset cs:Style         ; set frame style
 
 	call cs:drawFrame
 
-    mov si, offset cs:RegValues
+    mov si, offset cs:RegValues     ; si = &RegValues
     call cs:writeAllReg
 
     call cs:screenReg
 
 @@SkipDraw:
 
-    pop ax bx cx dx si di bp bx ds bx es bx bx
+    pop ax bx cx dx si di bp bx ds bx es bx bx  ; return registers
 
-	jmp cs:Old08Handler
+	jmp cs:Old08Handler     ; run old 08h interrupt handler
 
 	endp
 
@@ -184,9 +185,9 @@ drawFrame	proc
 	mov bp, di			; save di for strings
 
 	mov cx, dx			; draw 1st line
-	call cs:drawLine		;
+	call cs:drawLine
 
-	sub bx, 2
+	sub bx, 2           ; bx -= 2
 @@Next:
 	SHIFT_TO_NEXT_LINE
 
@@ -196,7 +197,7 @@ drawFrame	proc
 
 	sub si, 3			; return to 456 chars in str
 	dec bx				; height--
-	cmp bx, 0
+	cmp bx, 0           ; if (bx > 0) then Next
 	ja cs:@@Next
 
 	SHIFT_TO_NEXT_LINE
@@ -218,34 +219,34 @@ drawFrame	proc
 ;Destr: SI, AX, DX, CX, BX
 ;-----------------------------------------------------------------------------
 writeAllReg proc
-    mov cx, REG_AMOUNT
-    mov bx, sp
-    add bx, 2
+    mov cx, REG_AMOUNT          ; amount of registers to write
+    mov bx, sp                  ; bx = stack pointer
+    add bx, 2                   ; skip return address
 
 @@Next:
-    mov ax, word ptr ss:[bx]
-    add si, 3
+    mov ax, word ptr ss:[bx]    ; ax = reg_value in stack
+    add si, 3                   ; si += 3
 
 @@FirstDigit:
-    mov dx, ax
-    shr dx, 12
+    mov dx, ax                  ; dl = 1st digit in ax
+    shr dx, 12                  ;
 
-    cmp dl, 9
+    cmp dl, 9                   ; if dl > 9 (A B C D E F)
     jg cs:@@Hex1
 
-    add dl, 30h
-    mov byte ptr cs:[si], dl
-    inc si
+    add dl, 30h                 ; add '0' to ASKII code of digit
+    mov byte ptr cs:[si], dl    ; wrire character in RegValues
+    inc si                      ; si++
     jmp cs:@@SecondDigit
 @@Hex1:
-    add dl, 37h
-    mov byte ptr cs:[si], dl
-    inc si
+    add dl, 37h                 ; add 37h to ASKII code of digit
+    mov byte ptr cs:[si], dl    ; wrire character in RegValues
+    inc si                      ; si++
 
 @@SecondDigit:
-    mov dx, ax
-    shl dx, 4
-    shr dx, 12
+    mov dx, ax                  ;
+    shl dx, 4                   ; dl = 2nd digit in ax
+    shr dx, 12                  ;
 
     cmp dl, 9
     jg cs:@@Hex2
@@ -260,9 +261,9 @@ writeAllReg proc
     inc si
 
 @@ThirdDigit:
-    mov dx, ax
-    shl dx, 8
-    shr dx, 12
+    mov dx, ax                  ;
+    shl dx, 8                   ; dl = 3rd digit in ax
+    shr dx, 12                  ;
 
     cmp dl, 9
     jg cs:@@Hex3
@@ -277,9 +278,9 @@ writeAllReg proc
     inc si
 
 @@FourthDigit:
-    mov dx, ax
-    shl dx, 12
-    shr dx, 12
+    mov dx, ax                  ;
+    shl dx, 12                  ; dl = 4th digit in ax
+    shr dx, 12                  ;
 
     cmp dl, 9
     jg cs:@@Hex4
@@ -292,11 +293,11 @@ writeAllReg proc
     mov byte ptr cs:[si], dl
 
 @@DoneWriting:
-    add bx, 2
-    add si, 2
-    dec cx
+    add bx, 2                   ; bx += 2 to next register in stack
+    add si, 2                   ; si += 2
+    dec cx                      ; cx--
 
-    cmp cx, 0
+    cmp cx, 0                   ; if cx == 0 then Done else Next
     je cs:@@Done
     jmp cs:@@Next
 @@Done:
@@ -308,32 +309,32 @@ writeAllReg proc
 ;Prints RegValues in the frame
 ;Entry:	None
 ;Exit: None
-;Destr:
+;Destr: DI, DX, AX, SI, BP, CX
 ;-----------------------------------------------------------------------------
 screenReg   proc
     mov di, cs:Y_coord              ; y coord of the left-top corner of frame
-	mov dx, cs:X_coord		; x coord
+	mov dx, cs:X_coord		        ; x coord
     call cs:firstCharAddr
 
-    add di, 324
-    mov ah, 00000111b       ; black back, white front
-    mov si, offset cs:RegValues
-    mov dx, 7
-    mov bp, REG_AMOUNT
+    add di, 324                     ; add 2 lines and 2 rows
+    mov ah, 00000111b               ; black back, white front
+    mov si, offset cs:RegValues     ; si = &RegValues
+    mov dx, FRAME_WIDTH - 4         ; dx = line wdth (frame wdth - border_wdth)
+    mov bp, REG_AMOUNT              ; bp = REG_AMOUNT
 
 @@Next:
-    mov cx, dx
+    mov cx, dx                      ; cx = dx
 @@Loop:
-    lodsb
-    stosw
+    lodsb                           ; al = ds:[si++]
+    stosw                           ; es:[di++] = ax
 
-    loop cs:@@Loop
-    inc si
+    loop cs:@@Loop                  ; while (cx != 0) cx--
+    inc si                          ; si++
 
     SHIFT_TO_NEXT_LINE
 
-    dec bp
-    cmp bp, 0
+    dec bp                          ; bp--
+    cmp bp, 0                       ; if (bp != 0) then Next
     jne cs:@@Next
 
     ret
@@ -343,32 +344,32 @@ screenReg   proc
 ;Save frame to Buffer
 ;Entry:	None
 ;Exit: None
-;Destr:
+;Destr: DI, DX, SI, AX, ES, CX
 ;-----------------------------------------------------------------------------
 saveFrame   proc
     mov di, cs:Y_coord              ; y coord of the left-top corner of frame
-	mov dx, cs:X_coord		; x coord
+	mov dx, cs:X_coord		        ; x coord
     call cs:firstCharAddr
 
-    mov si, offset cs:Buffer
+    mov si, offset cs:Buffer        ; si = &Buffer
 
-    mov ax, VIDEOSEG
-    mov es, ax
+    mov ax, VIDEOSEG                ; ax = VIDEOSEG
+    mov es, ax                      ; es = ax
 
-    mov cx, 16      ;height
-    mov dx, 11      ;width for  macro
+    mov cx, REG_AMOUNT + 4          ; cx = frame height
+    mov dx, FRAME_WIDTH             ; dx = frame width
 @@Next:
-    mov bx, dx      ;width
+    mov bx, dx                      ; bx = dx
 
 @@Line:
-    mov ax, word ptr es:[di]
-    add di, 2
+    mov ax, word ptr es:[di]        ; ax = es:[di++]
+    add di, 2                       ; di += 2
 
-    mov word ptr cs:[si], ax
-    add si, 2
+    mov word ptr cs:[si], ax        ; cs:[si] = ax
+    add si, 2                       ; si += 2
 
-    dec bx
-    cmp bx, 0
+    dec bx                          ; bx--
+    cmp bx, 0                       ; if (bx != 0) then Line
     jne cs:@@Line
 
     SHIFT_TO_NEXT_LINE
@@ -382,37 +383,37 @@ saveFrame   proc
 ;Set frame from Buffer
 ;Entry:	None
 ;Exit: None
-;Destr:
+;Destr: DI, DX, SI, AX, ES, CX, BX
 ;-----------------------------------------------------------------------------
 setFrame   proc
     mov di, cs:Y_coord              ; y coord of the left-top corner of frame
-	mov dx, cs:X_coord		; x coord
+	mov dx, cs:X_coord		        ; x coord
     call cs:firstCharAddr
 
-    mov si, offset cs:Buffer
+    mov si, offset cs:Buffer        ; si = &Buffer
 
-    mov ax, VIDEOSEG
-    mov es, ax
+    mov ax, VIDEOSEG                ; ax = VIDEOSEG
+    mov es, ax                      ; es = ax
 
-    mov ax, cs
-    mov ds, ax
+    mov ax, cs                      ; ax = cs
+    mov ds, ax                      ; ds = ax
 
-    mov cx, 16      ;height
-    mov dx, 11      ;width for  macro
+    mov cx, REG_AMOUNT + 4          ; cx = frame height
+    mov dx, FRAME_WIDTH             ; dx = frame width
 @@Next:
-    mov bx, dx      ;width
+    mov bx, dx                      ; bx = dx
 
 @@Line:
-    lodsw
-    stosw
+    lodsw                           ; ax = ds:[si++]
+    stosw                           ; es:[di++] = ax
 
-    dec bx
-    cmp bx, 0
+    dec bx                          ; bx--
+    cmp bx, 0                       ; if (bx != 0) then Line
     jne cs:@@Line
 
     SHIFT_TO_NEXT_LINE
 
-    loop cs:@@Next
+    loop cs:@@Next                  ; while (cx != 0) c--
 
     ret
     endp
@@ -421,29 +422,29 @@ EndOfResident:
 
 Load:
 	mov ax, 3509h			; get old 09h interrupt
-	int 21h				; handler in es:bx
+	int 21h				    ; handler in es:bx
 
 	mov word ptr Old09Handler, bx		; save old 09h offset
 	mov word ptr Old09HAndler + 2, es	; save old 09h segment
 
-	mov ax, 2509h				; set new 09h interrupt
+	mov ax, 2509h				    ; set new 09h interrupt
 	mov dx, offset checkKeys		; handler address
-	int 21h					;
+	int 21h
 
 	mov ax, 3508h				; get old 08h interrupt
-	int 21h					; handler addr in es:bx
+	int 21h					    ; handler addr in es:bx
 
 	mov word ptr Old08Handler, bx		; save old 08h offset
 	mov word ptr Old08Handler + 2, es	; save old 08h segment
 
 	mov ax, 2508h				; set new 08h interrup
 	mov dx, offset draw			; handler address
-	int 21h					;
+	int 21h					    ;
 
-	mov ax, 3100h				;
-	mov dx, offset EndOfResident		; dx = &EndOfResident
-	shr dx, 4				; count in paragraphs
-	inc dx					;
-	int 21h					; save and stay resident
+	mov ax, 3100h				    ;
+	mov dx, offset EndOfResident	; dx = &EndOfResident
+	shr dx, 4				        ; count in paragraphs
+	inc dx					        ;
+	int 21h					        ; save and stay resident
 
 end	Start
