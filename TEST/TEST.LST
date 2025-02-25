@@ -1,4 +1,4 @@
-Turbo Assembler	 Version 4.1	    02/24/25 23:33:04	    Page 1
+Turbo Assembler	 Version 4.1	    02/25/25 12:34:48	    Page 1
 test.asm
 
 
@@ -8,15 +8,28 @@ test.asm
       3				     org 100h
       4
       5	0100			     Start:
-      6	0100  B8 1111			     mov ax, 1111h
-      7	0103  BB 2222			     mov bx, 2222h
-      8	0106  B9 3333			     mov cx, 3333h
-      9	0109  BA 4444			     mov dx, 4444h
-     10
-     11	010C  EB F2			     jmp Start
-     12
-     13				     end     Start
-Turbo Assembler	 Version 4.1	    02/24/25 23:33:04	    Page 2
+      6
+      7	0100			     Next:
+      8	0100  E4 60			     in	al, 60h
+      9
+     10	0102  BB 2222			     mov bx, 2222h
+     11	0105  B9 3333			     mov cx, 3333h
+     12	0108  BA 4444			     mov dx, 4444h
+     13	010B  BE 5555			     mov si, 5555h
+     14	010E  BF 6666			     mov di, 6666h
+     15	0111  BD 7777			     mov bp, 7777h
+     16
+     17	0114  8E C3			     mov es, bx
+     18	0116  8E DB			     mov ds, bx
+     19
+     20	0118  3C 01			     cmp al, 1
+     21	011A  75 E4			     jne Next
+     22
+     23	011C  B8 4C00			     mov ax, 4c00h
+     24	011F  CD 21			     int 21h
+     25
+     26				     end     Start
+Turbo Assembler	 Version 4.1	    02/25/25 12:34:48	    Page 2
 Symbol Table
 
 
@@ -24,9 +37,9 @@ Symbol Table
 
 Symbol Name			  Type	 Value
 
-??DATE				  Text	 "02/24/25"
+??DATE				  Text	 "02/25/25"
 ??FILENAME			  Text	 "test	  "
-??TIME				  Text	 "23:33:04"
+??TIME				  Text	 "12:34:48"
 ??VERSION			  Number 040A
 @32BIT				  Text	 0
 @CODE				  Text	 DGROUP
@@ -40,11 +53,12 @@ Symbol Name			  Type	 Value
 @MODEL				  Text	 1
 @STACK				  Text	 DGROUP
 @WORDSIZE			  Text	 2
+NEXT				  Near	 DGROUP:0100
 START				  Near	 DGROUP:0100
 
 Groups & Segments		  Bit Size Align  Combine Class
 
 DGROUP				  Group
   _DATA				  16  0000 Word	  Public  DATA
-  _TEXT				  16  010E Word	  Public  CODE
+  _TEXT				  16  0121 Word	  Public  CODE
 

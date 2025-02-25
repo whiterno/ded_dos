@@ -1,4 +1,4 @@
-Turbo Assembler	 Version 4.1	    02/25/25 09:59:12	    Page 1
+Turbo Assembler	 Version 4.1	    02/25/25 12:48:09	    Page 1
 resident.asm
 
 
@@ -11,7 +11,7 @@ resident.asm
       6
       7	      =0021		     HOT_KEY		 equ	     33
       8	      =B800		     VIDEOSEG		 equ 0b800h
-      9	      =000C		     REG_AMOUNT	     equ 12
+      9	      =000F		     REG_AMOUNT	     equ 15
      10	      =000B		     FRAME_WIDTH     equ 11
      11
      12				     ;-----------------------------------------------------------------------------
@@ -29,7 +29,7 @@ resident.asm
      24
      25	0100			     Start:
      26
-     27	0100  E9 040C			     jmp Load
+     27	0100  E9 046E			     jmp Load
      28
      29	0103  00		     ActivateFlag    db	0
      30	0104  00000000		     Old08Handler    dd	0
@@ -39,494 +39,506 @@ resident.asm
      34	      CD BC
      35	0115  0000		     X_coord	     dw	0
      36	0117  0000		     Y_coord	     dw	0
-     37	0119  41 58 20 30 30 30	30+  RegValues	 db "AX	0000 BX	0000 CX	0000 DX	0000 SI	0000 DI	0000 BP	0000 SP	0000 DS	0000 CS	0000+
-     38	      20 42 58 20 30 30	30+  ES	0000 SS	0000"
+     37	0119  41 58 20 30 30 30	30+  RegValues	 db "AX	0000 BX	0000 CX	0000 DX	0000 "
+     38	      20 42 58 20 30 30	30+
      39	      30 20 43 58 20 30	30+
      40	      30 30 20 44 58 20	30+
-     41	      30 30 30 20 53 49	20+
-     42	      30 30 30 30 20 44	49+
-     43	      20 30 30 30 30 20	42+
-     44	      50 20 30 30 30 30	20+
-     45	      53 50 20 30 30 30	30+
-     46	      20 44 53 20 30 30	30+
-     47	      30 20 43 53 20 30	30+
-     48	      30 30 20 45 53 20	30+
-     49	      30 30 30 20 53 53	20+
-     50	      30 30 30 30
-     51	0178  B0*(0000)		     Buffer	 dw 176	dup(0)
-     52
-     53				     ;----------------------------------------------------------------------------
-     54				     ; New 09h interrupt, checks combination CTRL-F and	if pushed makes	xor 1 to
-     55				     ; ActivateFlag
-     56				     ;----------------------------------------------------------------------------
-     57	02D8			     checkKeys	     proc
-Turbo Assembler	 Version 4.1	    02/25/25 09:59:12	    Page 2
+     41	      30 30 30 20
+     42	0139  53 49 20 30 30 30	30+		 db "SI	0000 DI	0000 BP	0000 SP	0000 "
+     43	      20 44 49 20 30 30	30+
+     44	      30 20 42 50 20 30	30+
+     45	      30 30 20 53 50 20	30+
+     46	      30 30 30 20
+     47	0159  44 53 20 30 30 30	30+		 db "DS	0000 CS	0000 ES	0000 SS	0000 "
+     48	      20 43 53 20 30 30	30+
+     49	      30 20 45 53 20 30	30+
+     50	      30 30 20 53 53 20	30+
+     51	      30 30 30 20
+     52	0179  42 58 20 30 30 30	30+		 db "BX	0000 IP	0000 CS	0000"
+     53	      20 49 50 20 30 30	30+
+     54	      30 20 43 53 20 30	30+
+     55	      30 30
+     56	0190  D1*(0000)		     Buffer	 dw 209	dup(0)
+     57
+Turbo Assembler	 Version 4.1	    02/25/25 12:48:09	    Page 2
 resident.asm
 
 
 
-     58	02D8  9C			     pushf			     ; run old 09h interrupt
-     59	02D9  2E: FF 1E	0108r		     call cs:Old09Handler	     ; handler
-     60
-     61	02DE  50 53 51 52 57 56	1E+	     push ax bx	cx dx di si ds es    ; save registers
-     62	      06
-     63
-     64	02E6  B4 02			     mov ah, 02h		     ; get keyboard shift flags	value
-     65	02E8  CD 16			     int 16h			     ;
-     66
-     67	02EA  3C 04			     cmp al, 04h			     ; check if	ctrl is	pushed
-     68	02EC  75 38			     jne cs:@@SkipActivate
-     69
-     70	02EE  E4 60			     in	al, 60h			     ; check pushed key
+     58				     ;----------------------------------------------------------------------------
+     59				     ; New 09h interrupt, checks combination CTRL-F and	if pushed makes	xor 1 to
+     60				     ; ActivateFlag
+     61				     ;----------------------------------------------------------------------------
+     62	0332			     checkKeys	     proc
+     63	0332  9C			     pushf			     ; run old 09h interrupt
+     64	0333  2E: FF 1E	0108r		     call cs:Old09Handler	     ; handler
+     65
+     66	0338  50 53 51 52 57 56	1E+	     push ax bx	cx dx di si ds es    ; save registers
+     67	      06
+     68
+     69	0340  B4 02			     mov ah, 02h		     ; get keyboard shift flags	value
+     70	0342  CD 16			     int 16h			     ;
      71
-     72	02F0  3C 21			     cmp al, HOT_KEY			     ; compare al and 33(F scancode)
-     73	02F2  75 32			     jne cs:@@SkipActivate
+     72	0344  3C 04			     cmp al, 04h			     ; check if	ctrl is	pushed
+     73	0346  75 38			     jne cs:@@SkipActivate
      74
-     75	02F4  2E: A0 0103r		 mov al, cs:ActivateFlag	     ; save old	ActivateFlag
-     76	02F8  2E: 80 36	0103r 01	     xor cs:ActivateFlag, 00000001b	     ; ActivateFlag xor	1
-     77
-     78	02FE  3C 01			 cmp al, 1			     ; if frame	is active
-     79	0300  74 1F			 je cs:@@SetFrame
-     80
-     81	0302  B8 0003			     mov ax, 03h		     ; get mouse coords
-     82	0305  CD 33			     int 33h			     ; cx:dx = x:y
-     83
-     84	0307  C1 E9 03			     shr cx, 3			     ; required	shift to get
-     85	030A  C1 EA 03			     shr dx, 3			     ; columns and rows
-     86
-     87	030D  2E: 89 0E	0115r		     mov cs:X_coord, cx		     ; X_coord = cx
-     88	0312  2E: 89 16	0117r		     mov cs:Y_coord, dx		     ; Y_coord = dx
-     89
-     90	0317  E8 0187 90 90		 call cs:saveFrame
-     91	031C  EB 08 90 90 90		 jmp cs:@@SkipActivate
-     92
-     93	0321			     @@SetFrame:
-     94	0321  E8 01B7 90 90		 call cs:setFrame
-     95
-     96	0326			     @@SkipActivate:
+     75	0348  E4 60			     in	al, 60h			     ; check pushed key
+     76
+     77	034A  3C 21			     cmp al, HOT_KEY			     ; compare al and 33(F scancode)
+     78	034C  75 32			     jne cs:@@SkipActivate
+     79
+     80	034E  2E: A0 0103r		 mov al, cs:ActivateFlag	     ; save old	ActivateFlag
+     81	0352  2E: 80 36	0103r 01	     xor cs:ActivateFlag, 00000001b	     ; ActivateFlag xor	1
+     82
+     83	0358  3C 01			 cmp al, 1			     ; if frame	is active
+     84	035A  74 1F			 je cs:@@SetFrame
+     85
+     86	035C  B8 0003			     mov ax, 03h		     ; get mouse coords
+     87	035F  CD 33			     int 33h			     ; cx:dx = x:y
+     88
+     89	0361  C1 E9 03			     shr cx, 3			     ; required	shift to get
+     90	0364  C1 EA 03			     shr dx, 3			     ; columns and rows
+     91
+     92	0367  2E: 89 0E	0115r		     mov cs:X_coord, cx		     ; X_coord = cx
+     93	036C  2E: 89 16	0117r		     mov cs:Y_coord, dx		     ; Y_coord = dx
+     94
+     95	0371  E8 018F 90 90		 call cs:saveFrame
+     96	0376  EB 08 90 90 90		 jmp cs:@@SkipActivate
      97
-     98	0326  07 1F 5E 5F 5A 59	5B+	     pop es ds si di dx	cx bx ax	     ; return all registers
-     99	      58
+     98	037B			     @@SetFrame:
+     99	037B  E8 01BF 90 90		 call cs:setFrame
     100
-    101	032E  CF			     iret
-    102	032F				     endp
-    103
-    104				     ;-----------------------------------------------------------------------------
-    105				     ; If ActivateFlag is 1 - draws a frame with real time registers' values
-    106				     ; every tick, then	returns	to old 08h handler
-    107				     ; If ActivateFlag is 0 - returns to old 08h handler
-    108				     ;-----------------------------------------------------------------------------
-    109	032F			     draw	     proc
-    110	032F  53 16 06 0E 1E 54	55+	     push bx ss	es cs ds sp bp di si dx	cx bx ax ; save	registers
-    111	      57 56 52 51 53 50
-    112
-    113	033C  0E			     push cs		     ; set ds tocs to use string funcs
-    114	033D  1F			     pop ds		     ;
-Turbo Assembler	 Version 4.1	    02/25/25 09:59:12	    Page 3
+    101	0380			     @@SkipActivate:
+    102
+    103	0380  07 1F 5E 5F 5A 59	5B+	     pop es ds si di dx	cx bx ax	     ; return all registers
+    104	      58
+    105
+    106	0388  CF			     iret
+    107	0389				     endp
+    108
+    109				     ;-----------------------------------------------------------------------------
+    110				     ; If ActivateFlag is 1 - draws a frame with real time registers' values
+    111				     ; every tick, then	returns	to old 08h handler
+    112				     ; If ActivateFlag is 0 - returns to old 08h handler
+    113				     ;-----------------------------------------------------------------------------
+    114	0389			     draw	     proc
+Turbo Assembler	 Version 4.1	    02/25/25 12:48:09	    Page 3
 resident.asm
 
 
 
-    115
-    116	033E  2E: 80 3E	0103r 00	     cmp cs:ActivateFlag, 0  ; if ActivateFlag == 0 then skip draw
-    117	0344  74 31			     je	cs:@@SkipDraw	     ;
-    118
-    119	0346  2E: 8B 3E	0117r		 mov di, cs:Y_coord	 ; y coord of the left-top corner of frame
-    120	034B  2E: 8B 16	0115r		 mov dx, cs:X_coord	     ; x coord
-    121	0350  E8 0036 90 90		     call cs:firstCharAddr
-    122
-    123	0355  B8 B800			     mov ax, VIDEOSEG	     ; set videosegment	address
-    124	0358  8E C0			     mov es, ax		     ; in es
-    125
-    126	035A  B4 07			     mov ah, 00000111b		     ; black back, white front
-    127	035C  BB 0010			     mov bx, REG_AMOUNT	+ 4	     ; set frame height
-    128	035F  BA 000B			     mov dx, FRAME_WIDTH	     ; set frame width
-    129	0362  BE 010Cr			     mov si, offset cs:Style	     ; set frame style
+    115	0389  53 16 06			     push bx ss	es
+    116
+    117	038C  8B DC			     mov bx, sp			     ;
+    118	038E  83 C3 08			     add bx, 8			     ;
+    119	0391  36: 8B 1F			     mov bx, word ptr ss:[bx]	     ; bx = cx (before int)
+    120	0394  53			     push bx			     ; push cx (before int)
+    121
+    122	0395  1E 54 55 57 56 52	51+	     push  ds sp bp di si dx cx	bx ax ;	save registers
+    123	      53 50
+    124
+    125	039E  0E			     push cs		     ; set ds tocs to use string funcs
+    126	039F  1F			     pop ds		     ;
+    127
+    128	03A0  2E: 80 3E	0103r 00	     cmp cs:ActivateFlag, 0  ; if ActivateFlag == 0 then skip draw
+    129	03A6  74 31			     je	cs:@@SkipDraw	     ;
     130
-    131	0365  E8 003B 90 90		     call cs:drawFrame
-    132
-    133	036A  BE 0119r			 mov si, offset	cs:RegValues	 ; si =	&RegValues
-    134	036D  E8 0066 90 90		 call cs:writeAllReg
-    135
-    136	0372  E8 00FA 90 90		 call cs:screenReg
+    131	03A8  2E: 8B 3E	0117r		 mov di, cs:Y_coord	 ; y coord of the left-top corner of frame
+    132	03AD  2E: 8B 16	0115r		 mov dx, cs:X_coord	     ; x coord
+    133	03B2  E8 0036 90 90		     call cs:firstCharAddr
+    134
+    135	03B7  B8 B800			     mov ax, VIDEOSEG	     ; set videosegment	address
+    136	03BA  8E C0			     mov es, ax		     ; in es
     137
-    138	0377			     @@SkipDraw:
-    139
-    140	0377  58 5B 59 5A 5E 5F	5D+	 pop ax	bx cx dx si di bp bx ds	bx es bx bx  ; return registers
-    141	      5B 1F 5B 07 5B 5B
+    138	03BC  B4 07			     mov ah, 00000111b		     ; black back, white front
+    139	03BE  BB 0013			     mov bx, REG_AMOUNT	+ 4	     ; set frame height
+    140	03C1  BA 000B			     mov dx, FRAME_WIDTH	     ; set frame width
+    141	03C4  BE 010Cr			     mov si, offset cs:Style	     ; set frame style
     142
-    143	0384  2E: FF 2E	0104r		     jmp cs:Old08Handler     ; run old 08h interrupt handler
+    143	03C7  E8 003B 90 90		     call cs:drawFrame
     144
-    145	0389				     endp
-    146
-    147				     ;-----------------------------------------------------------------------------
-    148				     ;Counts memory address of the character on	x and y	coords in videosegment
-    149				     ;Entry: DX	- x coord
-    150				     ;	     DI	- y coord
-    151				     ;Exit:  DI	- memory adress	of the character
-    152				     ;Destr: DI, AX
-    153				     ;-----------------------------------------------------------------------------
-    154	0389			     firstCharAddr   proc
-    155
-    156	0389  8B C7			     mov ax, di			     ;
-    157	038B  C1 E7 06			     shl di, 6			     ;
-    158	038E  C1 E0 04			     shl ax, 4			     ; count memory adress
-    159	0391  03 F8			     add di, ax			     ;
-    160	0393  03 FA			     add di, dx			     ;
-    161	0395  D1 E7			     shl di, 1			     ;
-    162
-    163	0397  C3			     ret
-    164	0398				     endp
-    165
-    166				     ;-----------------------------------------------------------------------------
-    167				     ;Draws a line of characters in 3 byte string (122..223)
-    168				     ;Entry: DI	- memory address of the	1st character in videosegment
-    169				     ;	     SI	- memory address of 3 byte string
-    170				     ;	     AH	- color	attribute
-    171				     ;	     CX	- line width
-Turbo Assembler	 Version 4.1	    02/25/25 09:59:12	    Page 4
+    145	03CC  BE 0119r			 mov si, offset	cs:RegValues	 ; si =	&RegValues
+    146	03CF  E8 0066 90 90		 call cs:writeAllReg
+    147
+    148	03D4  E8 00FA 90 90		 call cs:screenReg
+    149
+    150	03D9			     @@SkipDraw:
+    151
+    152	03D9  58 5B 59 5A 5E 5F	5D+	 pop ax	bx cx dx si di bp bx ds	bx es bx bx  ; return registers
+    153	      5B 1F 5B 07 5B 5B
+    154
+    155	03E6  2E: FF 2E	0104r		     jmp cs:Old08Handler     ; run old 08h interrupt handler
+    156
+    157	03EB				     endp
+    158
+    159				     ;-----------------------------------------------------------------------------
+    160				     ;Counts memory address of the character on	x and y	coords in videosegment
+    161				     ;Entry: DX	- x coord
+    162				     ;	     DI	- y coord
+    163				     ;Exit:  DI	- memory adress	of the character
+    164				     ;Destr: DI, AX
+    165				     ;-----------------------------------------------------------------------------
+    166	03EB			     firstCharAddr   proc
+    167
+    168	03EB  8B C7			     mov ax, di			     ;
+    169	03ED  C1 E7 06			     shl di, 6			     ;
+    170	03F0  C1 E0 04			     shl ax, 4			     ; count memory adress
+    171	03F3  03 F8			     add di, ax			     ;
+Turbo Assembler	 Version 4.1	    02/25/25 12:48:09	    Page 4
 resident.asm
 
 
 
-    172				     ;Exit:  None
-    173				     ;Destr: DI, SI, CX, AL
-    174				     ;-----------------------------------------------------------------------------
-    175	0398			     drawLine	     proc
-    176
-    177	0398  AC			     lodsb			     ; draw 1st	character
-    178	0399  AB			     stosw			     ;
-    179
-    180	039A  83 E9 02			     sub cx, 2			     ;
-    181	039D  AC			     lodsb			     ; draw middle part	(2nd chars)
-    182	039E  F3> AB			     rep stosw			     ;
-    183
-    184	03A0  AC			     lodsb			     ; draw 3rd	character
-    185	03A1  AB			     stosw			     ;
-    186
-    187	03A2  C3			     ret
-    188	03A3				     endp
-    189
-    190				     ;-----------------------------------------------------------------------------
-    191				     ;Draws a frame of characters in 9 byte string
-    192				     ;Entry: DI	- memory address of the	1st character of the frame
-    193				     ;	     AH	- color	attribute
-    194				     ;	     BX	- frame	height
-    195				     ;	     DX	- line width
-    196				     ;	     SI	- memory address of 9 byte string
-    197				     ;Exit:  DI	- memory address of the	1st character of the frame
-    198				     ;	     DX	- frame	width
-    199				     ;Destr: AL, BX, CX, SI, DI, BP
-    200				     ;-----------------------------------------------------------------------------
-    201	03A3			     drawFrame	     proc
-    202
-    203	03A3  8B EF			     mov bp, di			     ; save di for strings
-    204
-    205	03A5  8B CA			     mov cx, dx			     ; draw 1st	line
-    206	03A7  E8 FFEE			     call cs:drawLine
-    207
-    208	03AA  83 EB 02			     sub bx, 2		 ; bx -= 2
-    209	03AD			     @@Next:
-    210					     SHIFT_TO_NEXT_LINE
-1   211	03AD  2B FA				     sub di, dx		     ; shift in	line
-1   212	03AF  2B FA				     sub di, dx		     ; di = di - 2*dx
-1   213	03B1  81 C7 00A0			     add di, 160	     ; jump on the next	line
+    172	03F5  03 FA			     add di, dx			     ;
+    173	03F7  D1 E7			     shl di, 1			     ;
+    174
+    175	03F9  C3			     ret
+    176	03FA				     endp
+    177
+    178				     ;-----------------------------------------------------------------------------
+    179				     ;Draws a line of characters in 3 byte string (122..223)
+    180				     ;Entry: DI	- memory address of the	1st character in videosegment
+    181				     ;	     SI	- memory address of 3 byte string
+    182				     ;	     AH	- color	attribute
+    183				     ;	     CX	- line width
+    184				     ;Exit:  None
+    185				     ;Destr: DI, SI, CX, AL
+    186				     ;-----------------------------------------------------------------------------
+    187	03FA			     drawLine	     proc
+    188
+    189	03FA  AC			     lodsb			     ; draw 1st	character
+    190	03FB  AB			     stosw			     ;
+    191
+    192	03FC  83 E9 02			     sub cx, 2			     ;
+    193	03FF  AC			     lodsb			     ; draw middle part	(2nd chars)
+    194	0400  F3> AB			     rep stosw			     ;
+    195
+    196	0402  AC			     lodsb			     ; draw 3rd	character
+    197	0403  AB			     stosw			     ;
+    198
+    199	0404  C3			     ret
+    200	0405				     endp
+    201
+    202				     ;-----------------------------------------------------------------------------
+    203				     ;Draws a frame of characters in 9 byte string
+    204				     ;Entry: DI	- memory address of the	1st character of the frame
+    205				     ;	     AH	- color	attribute
+    206				     ;	     BX	- frame	height
+    207				     ;	     DX	- line width
+    208				     ;	     SI	- memory address of 9 byte string
+    209				     ;Exit:  DI	- memory address of the	1st character of the frame
+    210				     ;	     DX	- frame	width
+    211				     ;Destr: AL, BX, CX, SI, DI, BP
+    212				     ;-----------------------------------------------------------------------------
+    213	0405			     drawFrame	     proc
     214
-    215	03B5  8B CA			     mov cx, dx			     ; revive width
+    215	0405  8B EF			     mov bp, di			     ; save di for strings
     216
-    217	03B7  E8 FFDE			     call cs:drawLine
-    218
-    219	03BA  83 EE 03			     sub si, 3			     ; return to 456 chars in str
-    220	03BD  4B			     dec bx			     ; height--
-    221	03BE  83 FB 00			     cmp bx, 0		 ; if (bx > 0) then Next
-    222	03C1  77 EA			     ja	cs:@@Next
-    223
-    224					     SHIFT_TO_NEXT_LINE
-1   225	03C3  2B FA				     sub di, dx		     ; shift in	line
-1   226	03C5  2B FA				     sub di, dx		     ; di = di - 2*dx
-1   227	03C7  81 C7 00A0			     add di, 160	     ; jump on the next	line
+    217	0407  8B CA			     mov cx, dx			     ; draw 1st	line
+    218	0409  E8 FFEE			     call cs:drawLine
+    219
+    220	040C  83 EB 02			     sub bx, 2		 ; bx -= 2
+    221	040F			     @@Next:
+    222					     SHIFT_TO_NEXT_LINE
+1   223	040F  2B FA				     sub di, dx		     ; shift in	line
+1   224	0411  2B FA				     sub di, dx		     ; di = di - 2*dx
+1   225	0413  81 C7 00A0			     add di, 160	     ; jump on the next	line
+    226
+    227	0417  8B CA			     mov cx, dx			     ; revive width
     228
-Turbo Assembler	 Version 4.1	    02/25/25 09:59:12	    Page 5
+Turbo Assembler	 Version 4.1	    02/25/25 12:48:09	    Page 5
 resident.asm
 
 
 
-    229	03CB  83 C6 03			     add si, 3			     ; *(si) = 7 (in 9 bytes str)
-    230	03CE  8B CA			     mov cx, dx			     ; revive width
-    231
-    232	03D0  E8 FFC5			     call cs:drawLine
-    233
-    234	03D3  8B FD			     mov di, bp			     ; revive di
+    229	0419  E8 FFDE			     call cs:drawLine
+    230
+    231	041C  83 EE 03			     sub si, 3			     ; return to 456 chars in str
+    232	041F  4B			     dec bx			     ; height--
+    233	0420  83 FB 00			     cmp bx, 0		 ; if (bx > 0) then Next
+    234	0423  77 EA			     ja	cs:@@Next
     235
-    236	03D5  C3			     ret
-    237	03D6				     endp
-    238
-    239				     ;-----------------------------------------------------------------------------
-    240				     ;Write registers' values in string	RegValues
-    241				     ;Entry: SI	- address of the beginning of the string
-    242				     ;Exit: None
-    243				     ;Destr: SI, AX, DX, CX, BX
-    244				     ;-----------------------------------------------------------------------------
-    245	03D6			     writeAllReg proc
-    246	03D6  B9 000C			 mov cx, REG_AMOUNT	     ; amount of registers to write
-    247	03D9  8B DC			 mov bx, sp		     ; bx = stack pointer
-    248	03DB  83 C3 02			 add bx, 2		     ; skip return address
-    249
-    250	03DE			     @@Next:
-    251	03DE  36: 8B 07			 mov ax, word ptr ss:[bx]    ; ax = reg_value in stack
-    252	03E1  83 C6 03			 add si, 3		     ; si += 3
-    253
-    254	03E4			     @@FirstDigit:
-    255	03E4  8B D0			 mov dx, ax		     ; dl = 1st	digit in ax
-    256	03E6  C1 EA 0C			 shr dx, 12		     ;
-    257
-    258	03E9  80 FA 09			 cmp dl, 9		     ; if dl > 9 (A B C	D E F)
-    259	03EC  7F 0C			 jg cs:@@Hex1
-    260
-    261	03EE  80 C2 30			 add dl, 30h		     ; add '0' to ASKII	code of	digit
-    262	03F1  2E: 88 14			 mov byte ptr cs:[si], dl    ; wrire character in RegValues
-    263	03F4  46			 inc si			     ; si++
-    264	03F5  EB 0A 90 90 90		 jmp cs:@@SecondDigit
-    265	03FA			     @@Hex1:
-    266	03FA  80 C2 37			 add dl, 37h		     ; add 37h to ASKII	code of	digit
-    267	03FD  2E: 88 14			 mov byte ptr cs:[si], dl    ; wrire character in RegValues
-    268	0400  46			 inc si			     ; si++
+    236					     SHIFT_TO_NEXT_LINE
+1   237	0425  2B FA				     sub di, dx		     ; shift in	line
+1   238	0427  2B FA				     sub di, dx		     ; di = di - 2*dx
+1   239	0429  81 C7 00A0			     add di, 160	     ; jump on the next	line
+    240
+    241	042D  83 C6 03			     add si, 3			     ; *(si) = 7 (in 9 bytes str)
+    242	0430  8B CA			     mov cx, dx			     ; revive width
+    243
+    244	0432  E8 FFC5			     call cs:drawLine
+    245
+    246	0435  8B FD			     mov di, bp			     ; revive di
+    247
+    248	0437  C3			     ret
+    249	0438				     endp
+    250
+    251				     ;-----------------------------------------------------------------------------
+    252				     ;Write registers' values in string	RegValues
+    253				     ;Entry: SI	- address of the beginning of the string
+    254				     ;Exit: None
+    255				     ;Destr: SI, AX, DX, CX, BX
+    256				     ;-----------------------------------------------------------------------------
+    257	0438			     writeAllReg proc
+    258	0438  B9 000F			 mov cx, REG_AMOUNT	     ; amount of registers to write
+    259	043B  8B DC			 mov bx, sp		     ; bx = stack pointer
+    260	043D  83 C3 02			 add bx, 2		     ; skip return address
+    261
+    262	0440			     @@Next:
+    263	0440  36: 8B 07			 mov ax, word ptr ss:[bx]    ; ax = reg_value in stack
+    264	0443  83 C6 03			 add si, 3		     ; si += 3
+    265
+    266	0446			     @@FirstDigit:
+    267	0446  8B D0			 mov dx, ax		     ; dl = 1st	digit in ax
+    268	0448  C1 EA 0C			 shr dx, 12		     ;
     269
-    270	0401			     @@SecondDigit:
-    271	0401  8B D0			 mov dx, ax		     ;
-    272	0403  C1 E2 04			 shl dx, 4		     ; dl = 2nd	digit in ax
-    273	0406  C1 EA 0C			 shr dx, 12		     ;
-    274
-    275	0409  80 FA 09			 cmp dl, 9
-    276	040C  7F 0C			 jg cs:@@Hex2
-    277
-    278	040E  80 C2 30			 add dl, 30h
-    279	0411  2E: 88 14			 mov byte ptr cs:[si], dl
-    280	0414  46			 inc si
-    281	0415  EB 0A 90 90 90		 jmp cs:@@ThirdDigit
-    282	041A			     @@Hex2:
-    283	041A  80 C2 37			 add dl, 37h
-    284	041D  2E: 88 14			 mov byte ptr cs:[si], dl
-    285	0420  46			 inc si
-Turbo Assembler	 Version 4.1	    02/25/25 09:59:12	    Page 6
+    270	044B  80 FA 09			 cmp dl, 9		     ; if dl > 9 (A B C	D E F)
+    271	044E  7F 0C			 jg cs:@@Hex1
+    272
+    273	0450  80 C2 30			 add dl, 30h		     ; add '0' to ASKII	code of	digit
+    274	0453  2E: 88 14			 mov byte ptr cs:[si], dl    ; wrire character in RegValues
+    275	0456  46			 inc si			     ; si++
+    276	0457  EB 0A 90 90 90		 jmp cs:@@SecondDigit
+    277	045C			     @@Hex1:
+    278	045C  80 C2 37			 add dl, 37h		     ; add 37h to ASKII	code of	digit
+    279	045F  2E: 88 14			 mov byte ptr cs:[si], dl    ; wrire character in RegValues
+    280	0462  46			 inc si			     ; si++
+    281
+    282	0463			     @@SecondDigit:
+    283	0463  8B D0			 mov dx, ax		     ;
+    284	0465  C1 E2 04			 shl dx, 4		     ; dl = 2nd	digit in ax
+    285	0468  C1 EA 0C			 shr dx, 12		     ;
+Turbo Assembler	 Version 4.1	    02/25/25 12:48:09	    Page 6
 resident.asm
 
 
 
     286
-    287	0421			     @@ThirdDigit:
-    288	0421  8B D0			 mov dx, ax		     ;
-    289	0423  C1 E2 08			 shl dx, 8		     ; dl = 3rd	digit in ax
-    290	0426  C1 EA 0C			 shr dx, 12		     ;
-    291
-    292	0429  80 FA 09			 cmp dl, 9
-    293	042C  7F 0C			 jg cs:@@Hex3
-    294
-    295	042E  80 C2 30			 add dl, 30h
-    296	0431  2E: 88 14			 mov byte ptr cs:[si], dl
-    297	0434  46			 inc si
-    298	0435  EB 0A 90 90 90		 jmp cs:@@FourthDigit
-    299	043A			     @@Hex3:
-    300	043A  80 C2 37			 add dl, 37h
-    301	043D  2E: 88 14			 mov byte ptr cs:[si], dl
-    302	0440  46			 inc si
+    287	046B  80 FA 09			 cmp dl, 9
+    288	046E  7F 0C			 jg cs:@@Hex2
+    289
+    290	0470  80 C2 30			 add dl, 30h
+    291	0473  2E: 88 14			 mov byte ptr cs:[si], dl
+    292	0476  46			 inc si
+    293	0477  EB 0A 90 90 90		 jmp cs:@@ThirdDigit
+    294	047C			     @@Hex2:
+    295	047C  80 C2 37			 add dl, 37h
+    296	047F  2E: 88 14			 mov byte ptr cs:[si], dl
+    297	0482  46			 inc si
+    298
+    299	0483			     @@ThirdDigit:
+    300	0483  8B D0			 mov dx, ax		     ;
+    301	0485  C1 E2 08			 shl dx, 8		     ; dl = 3rd	digit in ax
+    302	0488  C1 EA 0C			 shr dx, 12		     ;
     303
-    304	0441			     @@FourthDigit:
-    305	0441  8B D0			 mov dx, ax		     ;
-    306	0443  C1 E2 0C			 shl dx, 12		     ; dl = 4th	digit in ax
-    307	0446  C1 EA 0C			 shr dx, 12		     ;
-    308
-    309	0449  80 FA 09			 cmp dl, 9
-    310	044C  7F 0B			 jg cs:@@Hex4
-    311
-    312	044E  80 C2 30			 add dl, 30h
-    313	0451  2E: 88 14			 mov byte ptr cs:[si], dl
-    314	0454  EB 09 90 90 90		 jmp cs:@@DoneWriting
-    315	0459			     @@Hex4:
-    316	0459  80 C2 37			 add dl, 37h
-    317	045C  2E: 88 14			 mov byte ptr cs:[si], dl
-    318
-    319	045F			     @@DoneWriting:
-    320	045F  83 C3 02			 add bx, 2		     ; bx += 2 to next register	in stack
-    321	0462  83 C6 02			 add si, 2		     ; si += 2
-    322	0465  49			 dec cx			     ; cx--
+    304	048B  80 FA 09			 cmp dl, 9
+    305	048E  7F 0C			 jg cs:@@Hex3
+    306
+    307	0490  80 C2 30			 add dl, 30h
+    308	0493  2E: 88 14			 mov byte ptr cs:[si], dl
+    309	0496  46			 inc si
+    310	0497  EB 0A 90 90 90		 jmp cs:@@FourthDigit
+    311	049C			     @@Hex3:
+    312	049C  80 C2 37			 add dl, 37h
+    313	049F  2E: 88 14			 mov byte ptr cs:[si], dl
+    314	04A2  46			 inc si
+    315
+    316	04A3			     @@FourthDigit:
+    317	04A3  8B D0			 mov dx, ax		     ;
+    318	04A5  C1 E2 0C			 shl dx, 12		     ; dl = 4th	digit in ax
+    319	04A8  C1 EA 0C			 shr dx, 12		     ;
+    320
+    321	04AB  80 FA 09			 cmp dl, 9
+    322	04AE  7F 0B			 jg cs:@@Hex4
     323
-    324	0466  83 F9 00			 cmp cx, 0		     ; if cx ==	0 then Done else Next
-    325	0469  74 03			 je cs:@@Done
-    326	046B  E9 FF70			 jmp cs:@@Next
-    327	046E			     @@Done:
-    328
-    329	046E  C3			 ret
-    330	046F				 endp
-    331
-    332				     ;-----------------------------------------------------------------------------
-    333				     ;Prints RegValues in the frame
-    334				     ;Entry: None
-    335				     ;Exit: None
-    336				     ;Destr: DI, DX, AX, SI, BP, CX
-    337				     ;-----------------------------------------------------------------------------
-    338	046F			     screenReg	 proc
-    339	046F  2E: 8B 3E	0117r		 mov di, cs:Y_coord		 ; y coord of the left-top corner of frame
-    340	0474  2E: 8B 16	0115r		     mov dx, cs:X_coord			     ; x coord
-    341	0479  E8 FF0D			 call cs:firstCharAddr
-    342
-Turbo Assembler	 Version 4.1	    02/25/25 09:59:12	    Page 7
+    324	04B0  80 C2 30			 add dl, 30h
+    325	04B3  2E: 88 14			 mov byte ptr cs:[si], dl
+    326	04B6  EB 09 90 90 90		 jmp cs:@@DoneWriting
+    327	04BB			     @@Hex4:
+    328	04BB  80 C2 37			 add dl, 37h
+    329	04BE  2E: 88 14			 mov byte ptr cs:[si], dl
+    330
+    331	04C1			     @@DoneWriting:
+    332	04C1  83 C3 02			 add bx, 2		     ; bx += 2 to next register	in stack
+    333	04C4  83 C6 02			 add si, 2		     ; si += 2
+    334	04C7  49			 dec cx			     ; cx--
+    335
+    336	04C8  83 F9 00			 cmp cx, 0		     ; if cx ==	0 then Done else Next
+    337	04CB  74 03			 je cs:@@Done
+    338	04CD  E9 FF70			 jmp cs:@@Next
+    339	04D0			     @@Done:
+    340
+    341	04D0  C3			 ret
+    342	04D1				 endp
+Turbo Assembler	 Version 4.1	    02/25/25 12:48:09	    Page 7
 resident.asm
 
 
 
-    343	047C  81 C7 0144		 add di, 324			 ; add 2 lines and 2 rows
-    344	0480  B4 07			 mov ah, 00000111b		 ; black back, white front
-    345	0482  BE 0119r			 mov si, offset	cs:RegValues	 ; si =	&RegValues
-    346	0485  BA 0007			 mov dx, FRAME_WIDTH - 4	 ; dx =	line wdth (frame wdth -	border_wdth)
-    347	0488  BD 000C			 mov bp, REG_AMOUNT		 ; bp =	REG_AMOUNT
-    348
-    349	048B			     @@Next:
-    350	048B  8B CA			 mov cx, dx			 ; cx =	dx
-    351	048D			     @@Loop:
-    352	048D  AC			 lodsb				 ; al =	ds:[si++]
-    353	048E  AB			 stosw				 ; es:[di++] = ax
+    343
+    344				     ;-----------------------------------------------------------------------------
+    345				     ;Prints RegValues in the frame
+    346				     ;Entry: None
+    347				     ;Exit: None
+    348				     ;Destr: DI, DX, AX, SI, BP, CX
+    349				     ;-----------------------------------------------------------------------------
+    350	04D1			     screenReg	 proc
+    351	04D1  2E: 8B 3E	0117r		 mov di, cs:Y_coord		 ; y coord of the left-top corner of frame
+    352	04D6  2E: 8B 16	0115r		     mov dx, cs:X_coord			     ; x coord
+    353	04DB  E8 FF0D			 call cs:firstCharAddr
     354
-    355	048F  E2 FC			 loop cs:@@Loop			 ; while (cx !=	0) cx--
-    356	0491  46			 inc si				 ; si++
-    357
-    358					 SHIFT_TO_NEXT_LINE
-1   359	0492  2B FA				     sub di, dx		     ; shift in	line
-1   360	0494  2B FA				     sub di, dx		     ; di = di - 2*dx
-1   361	0496  81 C7 00A0			     add di, 160	     ; jump on the next	line
-    362
-    363	049A  4D			 dec bp				 ; bp--
-    364	049B  83 FD 00			 cmp bp, 0			 ; if (bp != 0)	then Next
-    365	049E  75 EB			 jne cs:@@Next
+    355	04DE  81 C7 0144		 add di, 324			 ; add 2 lines and 2 rows
+    356	04E2  B4 07			 mov ah, 00000111b		 ; black back, white front
+    357	04E4  BE 0119r			 mov si, offset	cs:RegValues	 ; si =	&RegValues
+    358	04E7  BA 0007			 mov dx, FRAME_WIDTH - 4	 ; dx =	line wdth (frame wdth -	border_wdth)
+    359	04EA  BD 000F			 mov bp, REG_AMOUNT		 ; bp =	REG_AMOUNT
+    360
+    361	04ED			     @@Next:
+    362	04ED  8B CA			 mov cx, dx			 ; cx =	dx
+    363	04EF			     @@Loop:
+    364	04EF  AC			 lodsb				 ; al =	ds:[si++]
+    365	04F0  AB			 stosw				 ; es:[di++] = ax
     366
-    367	04A0  C3			 ret
-    368	04A1				 endp
+    367	04F1  E2 FC			 loop cs:@@Loop			 ; while (cx !=	0) cx--
+    368	04F3  46			 inc si				 ; si++
     369
-    370				     ;-----------------------------------------------------------------------------
-    371				     ;Save frame to Buffer
-    372				     ;Entry: None
-    373				     ;Exit: None
-    374				     ;Destr: DI, DX, SI, AX, ES, CX
-    375				     ;-----------------------------------------------------------------------------
-    376	04A1			     saveFrame	 proc
-    377	04A1  2E: 8B 3E	0117r		 mov di, cs:Y_coord		 ; y coord of the left-top corner of frame
-    378	04A6  2E: 8B 16	0115r		     mov dx, cs:X_coord			     ; x coord
-    379	04AB  E8 FEDB			 call cs:firstCharAddr
-    380
-    381	04AE  BE 0178r			 mov si, offset	cs:Buffer	 ; si =	&Buffer
-    382
-    383	04B1  B8 B800			 mov ax, VIDEOSEG		 ; ax =	VIDEOSEG
-    384	04B4  8E C0			 mov es, ax			 ; es =	ax
-    385
-    386	04B6  B9 0010			 mov cx, REG_AMOUNT + 4		 ; cx =	frame height
-    387	04B9  BA 000B			 mov dx, FRAME_WIDTH		 ; dx =	frame width
-    388	04BC			     @@Next:
-    389	04BC  8B DA			 mov bx, dx			 ; bx =	dx
-    390
-    391	04BE			     @@Line:
-    392	04BE  26: 8B 05			 mov ax, word ptr es:[di]	 ; ax =	es:[di++]
-    393	04C1  83 C7 02			 add di, 2			 ; di += 2
+    370					 SHIFT_TO_NEXT_LINE
+1   371	04F4  2B FA				     sub di, dx		     ; shift in	line
+1   372	04F6  2B FA				     sub di, dx		     ; di = di - 2*dx
+1   373	04F8  81 C7 00A0			     add di, 160	     ; jump on the next	line
+    374
+    375	04FC  4D			 dec bp				 ; bp--
+    376	04FD  83 FD 00			 cmp bp, 0			 ; if (bp != 0)	then Next
+    377	0500  75 EB			 jne cs:@@Next
+    378
+    379	0502  C3			 ret
+    380	0503				 endp
+    381
+    382				     ;-----------------------------------------------------------------------------
+    383				     ;Save frame to Buffer
+    384				     ;Entry: None
+    385				     ;Exit: None
+    386				     ;Destr: DI, DX, SI, AX, ES, CX
+    387				     ;-----------------------------------------------------------------------------
+    388	0503			     saveFrame	 proc
+    389	0503  2E: 8B 3E	0117r		 mov di, cs:Y_coord		 ; y coord of the left-top corner of frame
+    390	0508  2E: 8B 16	0115r		     mov dx, cs:X_coord			     ; x coord
+    391	050D  E8 FEDB			 call cs:firstCharAddr
+    392
+    393	0510  BE 0190r			 mov si, offset	cs:Buffer	 ; si =	&Buffer
     394
-    395	04C4  2E: 89 04			 mov word ptr cs:[si], ax	 ; cs:[si] = ax
-    396	04C7  83 C6 02			 add si, 2			 ; si += 2
+    395	0513  B8 B800			 mov ax, VIDEOSEG		 ; ax =	VIDEOSEG
+    396	0516  8E C0			 mov es, ax			 ; es =	ax
     397
-    398	04CA  4B			 dec bx				 ; bx--
-    399	04CB  83 FB 00			 cmp bx, 0			 ; if (bx != 0)	then Line
-Turbo Assembler	 Version 4.1	    02/25/25 09:59:12	    Page 8
+    398	0518  B9 0013			 mov cx, REG_AMOUNT + 4		 ; cx =	frame height
+    399	051B  BA 000B			 mov dx, FRAME_WIDTH		 ; dx =	frame width
+Turbo Assembler	 Version 4.1	    02/25/25 12:48:09	    Page 8
 resident.asm
 
 
 
-    400	04CE  75 EE			 jne cs:@@Line
-    401
-    402					 SHIFT_TO_NEXT_LINE
-1   403	04D0  2B FA				     sub di, dx		     ; shift in	line
-1   404	04D2  2B FA				     sub di, dx		     ; di = di - 2*dx
-1   405	04D4  81 C7 00A0			     add di, 160	     ; jump on the next	line
+    400	051E			     @@Next:
+    401	051E  8B DA			 mov bx, dx			 ; bx =	dx
+    402
+    403	0520			     @@Line:
+    404	0520  26: 8B 05			 mov ax, word ptr es:[di]	 ; ax =	es:[di++]
+    405	0523  83 C7 02			 add di, 2			 ; di += 2
     406
-    407	04D8  E2 E2			 loop cs:@@Next
-    408
-    409	04DA  C3			 ret
-    410	04DB				 endp
-    411
-    412				     ;-----------------------------------------------------------------------------
-    413				     ;Set frame	from Buffer
-    414				     ;Entry: None
-    415				     ;Exit: None
-    416				     ;Destr: DI, DX, SI, AX, ES, CX, BX
-    417				     ;-----------------------------------------------------------------------------
-    418	04DB			     setFrame	proc
-    419	04DB  2E: 8B 3E	0117r		 mov di, cs:Y_coord		 ; y coord of the left-top corner of frame
-    420	04E0  2E: 8B 16	0115r		     mov dx, cs:X_coord			     ; x coord
-    421	04E5  E8 FEA1			 call cs:firstCharAddr
-    422
-    423	04E8  BE 0178r			 mov si, offset	cs:Buffer	 ; si =	&Buffer
-    424
-    425	04EB  B8 B800			 mov ax, VIDEOSEG		 ; ax =	VIDEOSEG
-    426	04EE  8E C0			 mov es, ax			 ; es =	ax
-    427
-    428	04F0  8C C8			 mov ax, cs			 ; ax =	cs
-    429	04F2  8E D8			 mov ds, ax			 ; ds =	ax
-    430
-    431	04F4  B9 0010			 mov cx, REG_AMOUNT + 4		 ; cx =	frame height
-    432	04F7  BA 000B			 mov dx, FRAME_WIDTH		 ; dx =	frame width
-    433	04FA			     @@Next:
-    434	04FA  8B DA			 mov bx, dx			 ; bx =	dx
-    435
-    436	04FC			     @@Line:
-    437	04FC  AD			 lodsw				 ; ax =	ds:[si++]
-    438	04FD  AB			 stosw				 ; es:[di++] = ax
+    407	0526  2E: 89 04			 mov word ptr cs:[si], ax	 ; cs:[si] = ax
+    408	0529  83 C6 02			 add si, 2			 ; si += 2
+    409
+    410	052C  4B			 dec bx				 ; bx--
+    411	052D  83 FB 00			 cmp bx, 0			 ; if (bx != 0)	then Line
+    412	0530  75 EE			 jne cs:@@Line
+    413
+    414					 SHIFT_TO_NEXT_LINE
+1   415	0532  2B FA				     sub di, dx		     ; shift in	line
+1   416	0534  2B FA				     sub di, dx		     ; di = di - 2*dx
+1   417	0536  81 C7 00A0			     add di, 160	     ; jump on the next	line
+    418
+    419	053A  E2 E2			 loop cs:@@Next
+    420
+    421	053C  C3			 ret
+    422	053D				 endp
+    423
+    424				     ;-----------------------------------------------------------------------------
+    425				     ;Set frame	from Buffer
+    426				     ;Entry: None
+    427				     ;Exit: None
+    428				     ;Destr: DI, DX, SI, AX, ES, CX, BX
+    429				     ;-----------------------------------------------------------------------------
+    430	053D			     setFrame	proc
+    431	053D  2E: 8B 3E	0117r		 mov di, cs:Y_coord		 ; y coord of the left-top corner of frame
+    432	0542  2E: 8B 16	0115r		     mov dx, cs:X_coord			     ; x coord
+    433	0547  E8 FEA1			 call cs:firstCharAddr
+    434
+    435	054A  BE 0190r			 mov si, offset	cs:Buffer	 ; si =	&Buffer
+    436
+    437	054D  B8 B800			 mov ax, VIDEOSEG		 ; ax =	VIDEOSEG
+    438	0550  8E C0			 mov es, ax			 ; es =	ax
     439
-    440	04FE  4B			 dec bx				 ; bx--
-    441	04FF  83 FB 00			 cmp bx, 0			 ; if (bx != 0)	then Line
-    442	0502  75 F8			 jne cs:@@Line
-    443
-    444					 SHIFT_TO_NEXT_LINE
-1   445	0504  2B FA				     sub di, dx		     ; shift in	line
-1   446	0506  2B FA				     sub di, dx		     ; di = di - 2*dx
-1   447	0508  81 C7 00A0			     add di, 160	     ; jump on the next	line
-    448
-    449	050C  E2 EC			 loop cs:@@Next			 ; while (cx !=	0) c--
-    450
-    451	050E  C3			 ret
-    452	050F				 endp
-    453
-    454	050F			     EndOfResident:
+    440	0552  8C C8			 mov ax, cs			 ; ax =	cs
+    441	0554  8E D8			 mov ds, ax			 ; ds =	ax
+    442
+    443	0556  B9 0013			 mov cx, REG_AMOUNT + 4		 ; cx =	frame height
+    444	0559  BA 000B			 mov dx, FRAME_WIDTH		 ; dx =	frame width
+    445	055C			     @@Next:
+    446	055C  8B DA			 mov bx, dx			 ; bx =	dx
+    447
+    448	055E			     @@Line:
+    449	055E  AD			 lodsw				 ; ax =	ds:[si++]
+    450	055F  AB			 stosw				 ; es:[di++] = ax
+    451
+    452	0560  4B			 dec bx				 ; bx--
+    453	0561  83 FB 00			 cmp bx, 0			 ; if (bx != 0)	then Line
+    454	0564  75 F8			 jne cs:@@Line
     455
-    456	050F			     Load:
-Turbo Assembler	 Version 4.1	    02/25/25 09:59:12	    Page 9
+    456					 SHIFT_TO_NEXT_LINE
+Turbo Assembler	 Version 4.1	    02/25/25 12:48:09	    Page 9
 resident.asm
 
 
 
-    457	050F  B8 3509			     mov ax, 3509h		     ; get old 09h interrupt
-    458	0512  CD 21			     int 21h				 ; handler in es:bx
-    459
-    460	0514  89 1E 0108r		     mov word ptr Old09Handler,	bx	     ; save old	09h offset
-    461	0518  8C 06 010Ar		     mov word ptr Old09HAndler + 2, es	     ; save old	09h segment
+1   457	0566  2B FA				     sub di, dx		     ; shift in	line
+1   458	0568  2B FA				     sub di, dx		     ; di = di - 2*dx
+1   459	056A  81 C7 00A0			     add di, 160	     ; jump on the next	line
+    460
+    461	056E  E2 EC			 loop cs:@@Next			 ; while (cx !=	0) c--
     462
-    463	051C  B8 2509			     mov ax, 2509h				 ; set new 09h interrupt
-    464	051F  BA 02D8r			     mov dx, offset checkKeys		     ; handler address
-    465	0522  CD 21			     int 21h
-    466
-    467	0524  B8 3508			     mov ax, 3508h			     ; get old 08h interrupt
-    468	0527  CD 21			     int 21h					 ; handler addr	in es:bx
-    469
-    470	0529  89 1E 0104r		     mov word ptr Old08Handler,	bx	     ; save old	08h offset
-    471	052D  8C 06 0106r		     mov word ptr Old08Handler + 2, es	     ; save old	08h segment
-    472
-    473	0531  B8 2508			     mov ax, 2508h			     ; set new 08h interrup
-    474	0534  BA 032Fr			     mov dx, offset draw		     ; handler address
-    475	0537  CD 21			     int 21h					 ;
-    476
-    477	0539  B8 3100			     mov ax, 3100h				 ;
-    478	053C  BA 050Fr			     mov dx, offset EndOfResident    ; dx = &EndOfResident
-    479	053F  C1 EA 04			     shr dx, 4					     ; count in	paragraphs
-    480	0542  42			     inc dx					     ;
-    481	0543  CD 21			     int 21h					     ; save and	stay resident
-    482
-    483				     end     Start
-Turbo Assembler	 Version 4.1	    02/25/25 09:59:12	    Page 10
+    463	0570  C3			 ret
+    464	0571				 endp
+    465
+    466	0571			     EndOfResident:
+    467
+    468	0571			     Load:
+    469	0571  B8 3509			     mov ax, 3509h		     ; get old 09h interrupt
+    470	0574  CD 21			     int 21h				 ; handler in es:bx
+    471
+    472	0576  89 1E 0108r		     mov word ptr Old09Handler,	bx	     ; save old	09h offset
+    473	057A  8C 06 010Ar		     mov word ptr Old09HAndler + 2, es	     ; save old	09h segment
+    474
+    475	057E  B8 2509			     mov ax, 2509h				 ; set new 09h interrupt
+    476	0581  BA 0332r			     mov dx, offset checkKeys		     ; handler address
+    477	0584  CD 21			     int 21h
+    478
+    479	0586  B8 3508			     mov ax, 3508h			     ; get old 08h interrupt
+    480	0589  CD 21			     int 21h					 ; handler addr	in es:bx
+    481
+    482	058B  89 1E 0104r		     mov word ptr Old08Handler,	bx	     ; save old	08h offset
+    483	058F  8C 06 0106r		     mov word ptr Old08Handler + 2, es	     ; save old	08h segment
+    484
+    485	0593  B8 2508			     mov ax, 2508h			     ; set new 08h interrup
+    486	0596  BA 0389r			     mov dx, offset draw		     ; handler address
+    487	0599  CD 21			     int 21h					 ;
+    488
+    489	059B  B8 3100			     mov ax, 3100h				 ;
+    490	059E  BA 0571r			     mov dx, offset EndOfResident    ; dx = &EndOfResident
+    491	05A1  C1 EA 04			     shr dx, 4					     ; count in	paragraphs
+    492	05A4  42			     inc dx					     ;
+    493	05A5  CD 21			     int 21h					     ; save and	stay resident
+    494
+    495				     end     Start
+Turbo Assembler	 Version 4.1	    02/25/25 12:48:09	    Page 10
 Symbol Table
 
 
@@ -536,30 +548,30 @@ Symbol Name			  Type	 Value
 
 ??DATE				  Text	 "02/25/25"
 ??FILENAME			  Text	 "resident"
-??TIME				  Text	 "09:59:12"
+??TIME				  Text	 "12:48:08"
 ??VERSION			  Number 040A
 @32BIT				  Text	 0
-@@DONE				  Near	 DGROUP:046E
-@@DONEWRITING			  Near	 DGROUP:045F
-@@FIRSTDIGIT			  Near	 DGROUP:03E4
-@@FOURTHDIGIT			  Near	 DGROUP:0441
-@@HEX1				  Near	 DGROUP:03FA
-@@HEX2				  Near	 DGROUP:041A
-@@HEX3				  Near	 DGROUP:043A
-@@HEX4				  Near	 DGROUP:0459
-@@LINE				  Near	 DGROUP:04BE
-@@LINE				  Near	 DGROUP:04FC
-@@LOOP				  Near	 DGROUP:048D
-@@NEXT				  Near	 DGROUP:03AD
-@@NEXT				  Near	 DGROUP:03DE
-@@NEXT				  Near	 DGROUP:048B
-@@NEXT				  Near	 DGROUP:04BC
-@@NEXT				  Near	 DGROUP:04FA
-@@SECONDDIGIT			  Near	 DGROUP:0401
-@@SETFRAME			  Near	 DGROUP:0321
-@@SKIPACTIVATE			  Near	 DGROUP:0326
-@@SKIPDRAW			  Near	 DGROUP:0377
-@@THIRDDIGIT			  Near	 DGROUP:0421
+@@DONE				  Near	 DGROUP:04D0
+@@DONEWRITING			  Near	 DGROUP:04C1
+@@FIRSTDIGIT			  Near	 DGROUP:0446
+@@FOURTHDIGIT			  Near	 DGROUP:04A3
+@@HEX1				  Near	 DGROUP:045C
+@@HEX2				  Near	 DGROUP:047C
+@@HEX3				  Near	 DGROUP:049C
+@@HEX4				  Near	 DGROUP:04BB
+@@LINE				  Near	 DGROUP:0520
+@@LINE				  Near	 DGROUP:055E
+@@LOOP				  Near	 DGROUP:04EF
+@@NEXT				  Near	 DGROUP:040F
+@@NEXT				  Near	 DGROUP:0440
+@@NEXT				  Near	 DGROUP:04ED
+@@NEXT				  Near	 DGROUP:051E
+@@NEXT				  Near	 DGROUP:055C
+@@SECONDDIGIT			  Near	 DGROUP:0463
+@@SETFRAME			  Near	 DGROUP:037B
+@@SKIPACTIVATE			  Near	 DGROUP:0380
+@@SKIPDRAW			  Near	 DGROUP:03D9
+@@THIRDDIGIT			  Near	 DGROUP:0483
 @CODE				  Text	 DGROUP
 @CODESIZE			  Text	 0
 @CPU				  Text	 0103H
@@ -572,32 +584,32 @@ Symbol Name			  Type	 Value
 @STACK				  Text	 DGROUP
 @WORDSIZE			  Text	 2
 ACTIVATEFLAG			  Byte	 DGROUP:0103
-BUFFER				  Word	 DGROUP:0178
-CHECKKEYS			  Near	 DGROUP:02D8
-DRAW				  Near	 DGROUP:032F
-DRAWFRAME			  Near	 DGROUP:03A3
-DRAWLINE			  Near	 DGROUP:0398
-ENDOFRESIDENT			  Near	 DGROUP:050F
-FIRSTCHARADDR			  Near	 DGROUP:0389
+BUFFER				  Word	 DGROUP:0190
+CHECKKEYS			  Near	 DGROUP:0332
+DRAW				  Near	 DGROUP:0389
+DRAWFRAME			  Near	 DGROUP:0405
+DRAWLINE			  Near	 DGROUP:03FA
+ENDOFRESIDENT			  Near	 DGROUP:0571
+FIRSTCHARADDR			  Near	 DGROUP:03EB
 FRAME_WIDTH			  Number 000B
 HOT_KEY				  Number 0021
-LOAD				  Near	 DGROUP:050F
+LOAD				  Near	 DGROUP:0571
 OLD08HANDLER			  Dword	 DGROUP:0104
 OLD09HANDLER			  Dword	 DGROUP:0108
 REGVALUES			  Byte	 DGROUP:0119
-REG_AMOUNT			  Number 000C
-SAVEFRAME			  Near	 DGROUP:04A1
-SCREENREG			  Near	 DGROUP:046F
-Turbo Assembler	 Version 4.1	    02/25/25 09:59:12	    Page 11
+REG_AMOUNT			  Number 000F
+SAVEFRAME			  Near	 DGROUP:0503
+SCREENREG			  Near	 DGROUP:04D1
+Turbo Assembler	 Version 4.1	    02/25/25 12:48:09	    Page 11
 Symbol Table
 
 
 
-SETFRAME			  Near	 DGROUP:04DB
+SETFRAME			  Near	 DGROUP:053D
 START				  Near	 DGROUP:0100
 STYLE				  Byte	 DGROUP:010C
 VIDEOSEG			  Number B800
-WRITEALLREG			  Near	 DGROUP:03D6
+WRITEALLREG			  Near	 DGROUP:0438
 X_COORD				  Word	 DGROUP:0115
 Y_COORD				  Word	 DGROUP:0117
 
@@ -609,5 +621,5 @@ Groups & Segments		  Bit Size Align  Combine Class
 
 DGROUP				  Group
   _DATA				  16  0000 Word	  Public  DATA
-  _TEXT				  16  0545 Word	  Public  CODE
+  _TEXT				  16  05A7 Word	  Public  CODE
 

@@ -6,7 +6,7 @@ org 100h
 
 HOT_KEY		    equ 	33
 VIDEOSEG	    equ	0b800h
-REG_AMOUNT      equ 12
+REG_AMOUNT      equ 15
 FRAME_WIDTH     equ 11
 
 ;-----------------------------------------------------------------------------
@@ -33,8 +33,11 @@ Old09Handler	dd 0
 Style		db 201d, 205d, 187d, 186d, 32d, 186d, 200d, 205d, 188d
 X_coord		dw 0
 Y_coord		dw 0
-RegValues   db "AX 0000 BX 0000 CX 0000 DX 0000 SI 0000 DI 0000 BP 0000 SP 0000 DS 0000 CS 0000 ES 0000 SS 0000"
-Buffer      dw 176 dup(0)
+RegValues   db "AX 0000 BX 0000 CX 0000 DX 0000 " 
+	    db "SI 0000 DI 0000 BP 0000 SP 0000 "
+	    db "DS 0000 CS 0000 ES 0000 SS 0000 "
+            db "BX 0000 IP 0000 CS 0000"
+Buffer      dw 209 dup(0)
 
 ;----------------------------------------------------------------------------
 ; New 09h interrupt, checks combination CTRL-F and if pushed makes xor 1 to
@@ -91,7 +94,14 @@ checkKeys	proc
 ; If ActivateFlag is 0 - returns to old 08h handler
 ;-----------------------------------------------------------------------------
 draw    	proc
-	push bx ss es cs ds sp bp di si dx cx bx ax ; save registers
+	push bx ss es
+	
+	mov bx, sp			;
+	add bx, 8			;
+	mov bx, word ptr ss:[bx]	; bx = cx (before int)
+	push bx				; push cx (before int)
+
+        push  ds sp bp di si dx cx bx ax ; save registers
 
 	push cs                 ; set ds tocs to use string funcs
 	pop ds                  ;
