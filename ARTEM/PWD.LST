@@ -1,0 +1,60 @@
+Turbo Assembler	 Version 4.1	    02/28/25 20:55:05	    Page 1
+pwd.asm
+
+
+
+      1	0000			     .model tiny
+      2	0000			     .code
+      3				     org 100h
+      4
+      5	0100			     Start:
+      6	0100  B9 FDCD			     mov cx, 0fdcdh
+      7	0103  B4 02			     mov ah, 02h
+      8	0105  B2 30			     mov dl, 30h
+      9	0107			     Next:
+     10	0107  CD 21			     int 21h
+     11	0109  E2 FC			     loop Next
+     12
+     13	010B  B2 1F			     mov dl, 1fh
+     14	010D  CD 21			     int 21h
+     15
+     16	010F  B2 01			     mov dl, 01h
+     17	0111  CD 21			     int 21h
+     18
+     19	0113  B8 4C00			     mov ax, 4c00h
+     20	0116  CD 21			     int 21h
+     21
+     22				     end     Start
+Turbo Assembler	 Version 4.1	    02/28/25 20:55:05	    Page 2
+Symbol Table
+
+
+
+
+Symbol Name			  Type	 Value
+
+??DATE				  Text	 "02/28/25"
+??FILENAME			  Text	 "pwd	  "
+??TIME				  Text	 "20:55:05"
+??VERSION			  Number 040A
+@32BIT				  Text	 0
+@CODE				  Text	 DGROUP
+@CODESIZE			  Text	 0
+@CPU				  Text	 0101H
+@CURSEG				  Text	 _TEXT
+@DATA				  Text	 DGROUP
+@DATASIZE			  Text	 0
+@FILENAME			  Text	 PWD
+@INTERFACE			  Text	 000H
+@MODEL				  Text	 1
+@STACK				  Text	 DGROUP
+@WORDSIZE			  Text	 2
+NEXT				  Near	 DGROUP:0107
+START				  Near	 DGROUP:0100
+
+Groups & Segments		  Bit Size Align  Combine Class
+
+DGROUP				  Group
+  _DATA				  16  0000 Word	  Public  DATA
+  _TEXT				  16  0118 Word	  Public  CODE
+
