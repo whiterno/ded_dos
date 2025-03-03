@@ -4,7 +4,7 @@ org 100h
 locals @@
 
 PASSWORD_LEN	equ 3
-CONTROL_BYTE	equ 0dh
+ENTER_PRESS	equ 0dh
 
 Start:
     	mov ah, 09h
@@ -13,17 +13,9 @@ Start:
 
 	mov cx, 0
     	mov di, offset Password_User
-ReadSymb:
-	add cx, 1000h
-    	mov ah, 01h
-	int 21h
 
-    	stosb
+	call readPassword
 
-	cmp al, 0dh
-	jne ReadSymb
-
-	shr cx, 12
 	cmp cx, PASSWORD_LEN + 1
 	jne @@Fail
 
@@ -74,6 +66,24 @@ checkPasswords	proc
 	
 	ret
 	endp
+
+;-----------------------------------------------------------------------------
+;-----------------------------------------------------------------------------
+readPassword	proc
+
+@@ReadSymb:
+	add cl, 1
+	mov ah, 01h
+	int 21h
+
+	stosb
+
+	cmp al, ENTER_PRESS
+	jne @@ReadSymb	
+
+	ret
+	endp
+
 
 Password_Request    db "Please, insert password to continue working with system:", 0ah, 0dh, "$"
 Password_Success    db "Access permited", 0ah, 0dh, "$"

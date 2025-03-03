@@ -1,4 +1,4 @@
-Turbo Assembler	 Version 4.1	    02/26/25 02:26:06	    Page 1
+Turbo Assembler	 Version 4.1	    03/03/25 20:35:34	    Page 1
 crackme.asm
 
 
@@ -9,105 +9,112 @@ crackme.asm
       4				     locals @@
       5
       6	      =0003		     PASSWORD_LEN    equ 3
-      7	      =000D		     CONTROL_BYTE    equ 0dh
+      7	      =000D		     ENTER_PRESS     equ 0dh
       8
       9	0100			     Start:
      10	0100  B4 09			     mov ah, 09h
-     11	0102  BA 016Er			     mov dx, offset Password_Request
+     11	0102  BA 0159r			     mov dx, offset Password_Request
      12	0105  CD 21			     int 21h
      13
      14	0107  B9 0000			     mov cx, 0
-     15	010A  BF 01CFr			     mov di, offset Password_User
-     16	010D			     ReadSymb:
-     17	010D  81 C1 1000		     add cx, 1000h
-     18	0111  B4 01			     mov ah, 01h
-     19	0113  CD 21			     int 21h
-     20
-     21	0115  AA			     stosb
-     22
-     23	0116  3C 0D			     cmp al, 0dh
-     24	0118  75 F3			     jne ReadSymb
-     25
-     26	011A  D1 E9 D1 E9 D1 E9	D1+	     shr cx, 12
-     27	      E9 D1 E9 D1 E9 D1	E9+
-     28	      D1 E9 D1 E9 D1 E9	D1+
-     29	      E9 D1 E9
-     30	0132  83 F9 04			     cmp cx, PASSWORD_LEN + 1
-     31	0135  75 11			     jne @@Fail
+     15	010A  BF 01BAr			     mov di, offset Password_User
+     16
+     17	010D  E8 003C			     call readPassword
+     18
+     19	0110  83 F9 04			     cmp cx, PASSWORD_LEN + 1
+     20	0113  75 11			     jne @@Fail
+     21
+     22	0115  E8 001A			     call checkPasswords
+     23
+     24	0118  3C 01			     cmp al, 1
+     25	011A  75 0A			     jne @@Fail
+     26
+     27	011C  B4 09			     mov ah, 09h
+     28	011E  BA 0194r			     mov dx, offset Password_Success
+     29	0121  CD 21			     int 21h
+     30
+     31	0123  EB 08 90			     jmp @@Exit
      32
-     33	0137  E8 001A			     call checkPasswords
+     33	0126			     @@Fail:
      34
-     35	013A  3C 01			     cmp al, 1
-     36	013C  75 0A			     jne @@Fail
-     37
-     38	013E  B4 09			     mov ah, 09h
-     39	0140  BA 01A9r			     mov dx, offset Password_Success
-     40	0143  CD 21			     int 21h
-     41
-     42	0145  EB 08 90			     jmp @@Exit
-     43
-     44	0148			     @@Fail:
-     45
-     46	0148  B4 09			     mov ah, 09h
-     47	014A  BA 01BBr			     mov dx, offset Password_Fail
-     48	014D  CD 21			     int 21h
+     35	0126  B4 09			     mov ah, 09h
+     36	0128  BA 01A6r			     mov dx, offset Password_Fail
+     37	012B  CD 21			     int 21h
+     38
+     39	012D			     @@Exit:
+     40	012D  B8 4C00			     mov ax, 4c00h	 ;
+     41	0130  CD 21			     int 21h		 ; exit(0)
+     42
+     43				     ;-----------------------------------------------------------------------------
+     44				     ;-----------------------------------------------------------------------------
+     45	0132			     checkPasswords  proc
+     46
+     47	0132  BE 01BAr			     mov si, offset Password_User
+     48	0135  BF 01BEr			     mov di, offset Password_Real
      49
-     50	014F			     @@Exit:
-     51	014F  B8 4C00			     mov ax, 4c00h	 ;
-     52	0152  CD 21			     int 21h		 ; exit(0)
-     53
-     54				     ;-----------------------------------------------------------------------------
-     55				     ;-----------------------------------------------------------------------------
-     56	0154			     checkPasswords  proc
+     50	0138  B0 01			     mov al, 1
+     51	013A  B9 0003			     mov cx, PASSWORD_LEN
+     52
+     53	013D			     @@Next:
+     54
+     55	013D  8A 14			     mov dl, byte ptr [si]
+     56	013F  8A 35			     mov dh, byte ptr [di]
      57
-Turbo Assembler	 Version 4.1	    02/26/25 02:26:06	    Page 2
+Turbo Assembler	 Version 4.1	    03/03/25 20:35:34	    Page 2
 crackme.asm
 
 
 
-     58	0154  BE 01CFr			     mov si, offset Password_User
-     59	0157  BF 01D3r			     mov di, offset Password_Real
+     58	0141  46			     inc si
+     59	0142  47			     inc di
      60
-     61	015A  B0 01			     mov al, 1
-     62	015C  B9 0003			     mov cx, PASSWORD_LEN
-     63
-     64	015F			     @@Next:
-     65
-     66	015F  8A 14			     mov dl, byte ptr [si]
-     67	0161  8A 35			     mov dh, byte ptr [di]
-     68
-     69	0163  46			     inc si
-     70	0164  47			     inc di
-     71
-     72	0165  3A D6			     cmp dl, dh
-     73	0167  74 02			     je	@@Good
-     74	0169  B0 00			     mov al, 0
-     75	016B			     @@Good:
-     76	016B  E2 F2			     loop @@Next
-     77
-     78	016D  C3			     ret
-     79	016E				     endp
+     61	0143  3A D6			     cmp dl, dh
+     62	0145  74 02			     je	@@Good
+     63	0147  B0 00			     mov al, 0
+     64	0149			     @@Good:
+     65	0149  E2 F2			     loop @@Next
+     66
+     67	014B  C3			     ret
+     68	014C				     endp
+     69
+     70				     ;-----------------------------------------------------------------------------
+     71				     ;-----------------------------------------------------------------------------
+     72	014C			     readPassword    proc
+     73
+     74	014C			     @@ReadSymb:
+     75	014C  80 C1 01			     add cl, 1
+     76	014F  B4 01			     mov ah, 01h
+     77	0151  CD 21			     int 21h
+     78
+     79	0153  AA			     stosb
      80
-     81	016E  50 6C 65 61 73 65	2C+  Password_Request	 db "Please, insert password to	continue working with system:",	0ah, 0dh, "$"
-     82	      20 69 6E 73 65 72	74+
-     83	      20 70 61 73 73 77	6F+
-     84	      72 64 20 74 6F 20	63+
-     85	      6F 6E 74 69 6E 75	65+
-     86	      20 77 6F 72 6B 69	6E+
-     87	      67 20 77 69 74 68	20+
-     88	      73 79 73 74 65 6D	3A+
-     89	      0A 0D 24
-     90	01A9  41 63 63 65 73 73	20+  Password_Success	 db "Access permited", 0ah, 0dh, "$"
-     91	      70 65 72 6D 69 74	65+
-     92	      64 0A 0D 24
-     93	01BB  59 6F 75 20 77 6F	6E+  Password_Fail	 db "You won't fool me", 0ah, 0dh, "$"
-     94	      27 74 20 66 6F 6F	6C+
-     95	      20 6D 65 0A 0D 24
-     96
-     97	01CF  04*(00)		     Password_User	 db PASSWORD_LEN + 1 dup(0)
-     98	01D3  31 32 33		     Password_Real	 db "123"
-     99				     end     Start
-Turbo Assembler	 Version 4.1	    02/26/25 02:26:06	    Page 3
+     81	0154  3C 0D			     cmp al, ENTER_PRESS
+     82	0156  75 F4			     jne @@ReadSymb
+     83
+     84	0158  C3			     ret
+     85	0159				     endp
+     86
+     87
+     88	0159  50 6C 65 61 73 65	2C+  Password_Request	 db "Please, insert password to	continue working with system:",	0ah, 0dh, "$"
+     89	      20 69 6E 73 65 72	74+
+     90	      20 70 61 73 73 77	6F+
+     91	      72 64 20 74 6F 20	63+
+     92	      6F 6E 74 69 6E 75	65+
+     93	      20 77 6F 72 6B 69	6E+
+     94	      67 20 77 69 74 68	20+
+     95	      73 79 73 74 65 6D	3A+
+     96	      0A 0D 24
+     97	0194  41 63 63 65 73 73	20+  Password_Success	 db "Access permited", 0ah, 0dh, "$"
+     98	      70 65 72 6D 69 74	65+
+     99	      64 0A 0D 24
+    100	01A6  59 6F 75 20 77 6F	6E+  Password_Fail	 db "You won't fool me", 0ah, 0dh, "$"
+    101	      27 74 20 66 6F 6F	6C+
+    102	      20 6D 65 0A 0D 24
+    103
+    104	01BA  04*(00)		     Password_User	 db PASSWORD_LEN + 1 dup(0)
+    105	01BE  31 32 33		     Password_Real	 db "123"
+    106				     end     Start
+Turbo Assembler	 Version 4.1	    03/03/25 20:35:34	    Page 3
 Symbol Table
 
 
@@ -115,15 +122,16 @@ Symbol Table
 
 Symbol Name			  Type	 Value
 
-??DATE				  Text	 "02/26/25"
+??DATE				  Text	 "03/03/25"
 ??FILENAME			  Text	 "crackme "
-??TIME				  Text	 "02:26:06"
+??TIME				  Text	 "20:35:34"
 ??VERSION			  Number 040A
 @32BIT				  Text	 0
-@@EXIT				  Near	 DGROUP:014F
-@@FAIL				  Near	 DGROUP:0148
-@@GOOD				  Near	 DGROUP:016B
-@@NEXT				  Near	 DGROUP:015F
+@@EXIT				  Near	 DGROUP:012D
+@@FAIL				  Near	 DGROUP:0126
+@@GOOD				  Near	 DGROUP:0149
+@@NEXT				  Near	 DGROUP:013D
+@@READSYMB			  Near	 DGROUP:014C
 @CODE				  Text	 DGROUP
 @CODESIZE			  Text	 0
 @CPU				  Text	 0101H
@@ -135,20 +143,20 @@ Symbol Name			  Type	 Value
 @MODEL				  Text	 1
 @STACK				  Text	 DGROUP
 @WORDSIZE			  Text	 2
-CHECKPASSWORDS			  Near	 DGROUP:0154
-CONTROL_BYTE			  Number 000D
-PASSWORD_FAIL			  Byte	 DGROUP:01BB
+CHECKPASSWORDS			  Near	 DGROUP:0132
+ENTER_PRESS			  Number 000D
+PASSWORD_FAIL			  Byte	 DGROUP:01A6
 PASSWORD_LEN			  Number 0003
-PASSWORD_REAL			  Byte	 DGROUP:01D3
-PASSWORD_REQUEST		  Byte	 DGROUP:016E
-PASSWORD_SUCCESS		  Byte	 DGROUP:01A9
-PASSWORD_USER			  Byte	 DGROUP:01CF
-READSYMB			  Near	 DGROUP:010D
+PASSWORD_REAL			  Byte	 DGROUP:01BE
+PASSWORD_REQUEST		  Byte	 DGROUP:0159
+PASSWORD_SUCCESS		  Byte	 DGROUP:0194
+PASSWORD_USER			  Byte	 DGROUP:01BA
+READPASSWORD			  Near	 DGROUP:014C
 START				  Near	 DGROUP:0100
 
 Groups & Segments		  Bit Size Align  Combine Class
 
 DGROUP				  Group
   _DATA				  16  0000 Word	  Public  DATA
-  _TEXT				  16  01D6 Word	  Public  CODE
+  _TEXT				  16  01C1 Word	  Public  CODE
 
